@@ -1,7 +1,34 @@
-/* ส่วนเล็ก ๆ ที่ Tailwind utility ทำไม่สะดวก: สีสถานะ (ใช้จาก JS), Leaflet, พิมพ์รายงาน */
+/* ส่วนเล็ก ๆ ที่ Tailwind utility ทำไม่สะดวก: สีสถานะ (ใช้จาก JS), Leaflet, พิมพ์รายงาน, รองรับมือถือ/แท็บเล็ต/คอม */
 :root{ --new:#c62828; --recv:#ef6c00; --prog:#1565c0; --done:#2e7d32; --close:#607d8b; --fake:#424242; }
 .p-new{background:var(--new)}.p-recv{background:var(--recv)}.p-prog{background:var(--prog)}.p-done{background:var(--done)}.p-close{background:var(--close)}.p-fake{background:var(--fake)}
 .s-new{border-left-color:var(--new)}.s-recv{border-left-color:var(--recv)}.s-prog{border-left-color:var(--prog)}.s-done{border-left-color:var(--done)}.s-close{border-left-color:var(--close)}.s-fake{border-left-color:var(--fake)}
 .leaflet-container{font-family:inherit;z-index:1}
 .leaflet-popup-content{margin:10px 12px;line-height:1.5}
+
+/* ---- ทุกแพลตฟอร์ม ---- */
+html{ -webkit-text-size-adjust:100%; text-size-adjust:100%; }                 /* iOS ไม่ขยายฟอนต์เองตอนหมุนจอ */
+body{ min-height:100dvh; overflow-x:hidden; -webkit-tap-highlight-color:transparent; overscroll-behavior-y:contain; }
+/* กันจอบาก/แถบล่าง iPhone-Android เมื่อติดตั้งเป็นแอป */
+body{ padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right); padding-bottom:env(safe-area-inset-bottom); }
+header.sticky{ padding-top:calc(0.625rem + env(safe-area-inset-top)); }
+/* ปุ่ม/ช่องกรอก แตะง่ายบนจอสัมผัส (≥44px ตามแนวทาง Apple/Google) */
+button, select, input:not([type=checkbox]), a[class*="rounded"]{ min-height:44px; }
+@media (pointer:fine){ button, select, input:not([type=checkbox]), a[class*="rounded"]{ min-height:36px; } }   /* เมาส์ = คอม ให้กะทัดรัดกว่า */
+/* ตารางกว้างเลื่อนซ้าย-ขวาได้ ไม่ดันหน้าให้แตก */
+.tbl-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; max-width:100%; }
+.tbl-wrap table{ min-width:max-content; }
+/* iOS จะซูมหน้าเองเมื่อแตะช่องกรอกที่ฟอนต์เล็กกว่า 16px */
+@media (max-width:767px){ input, select, textarea{ font-size:16px !important; } }
+/* แท็บแอดมินบนมือถือ: เลื่อนแนวนอนแทนการตัดบรรทัด */
+#tabs{ overflow-x:auto; flex-wrap:nowrap; scrollbar-width:none; }
+#tabs::-webkit-scrollbar{ display:none; }
+#tabs button{ white-space:nowrap; flex-shrink:0; }
+/* แผนที่บนมือถือ: ใช้ dvh กันแถบเบราว์เซอร์บัง */
+@media (max-width:1023px){ #map{ height:42dvh; } }
+/* สลับ "แผนที่ / รายการ" บนมือถือ (ปุ่มใน Board.html) */
+@media (max-width:1023px){ .board-list #map{ display:none; } .board-map #list{ display:none; } }
+@media (min-width:1024px){ #viewToggle{ display:none; } }
+/* ป้าย "ติดตั้งแอป" */
+#installBar{ position:fixed; left:0; right:0; bottom:0; z-index:1100; padding-bottom:env(safe-area-inset-bottom); }
+
 @media print{ .noprint{display:none!important} body{background:#fff!important} .print-break{page-break-inside:avoid} }

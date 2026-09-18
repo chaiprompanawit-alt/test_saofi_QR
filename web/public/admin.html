@@ -2,7 +2,14 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1e4e9a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="แจ้งซ่อมไฟ">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%92%A1%3C/text%3E%3C/svg%3E">
 <title>แอดมิน — แจ้งซ่อมไฟฟ้า</title>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&display=swap" rel="stylesheet">
@@ -30,7 +37,7 @@ function start(){
   if (me.role !== 'admin') { document.getElementById('root').innerHTML = '<div class="max-w-sm mx-auto mt-14 '+T.card+' text-center"><div class="text-4xl">⛔</div><p class="mt-2">บัญชีนี้เป็นสิทธิ์ช่าง ไม่สามารถเข้าหน้าแอดมินได้</p><a href="/tech" class="'+T.btn+' mt-3">ไปหน้าช่าง</a><br><button class="text-sm text-stone-500 mt-3 underline" onclick="Auth.clear()">ออกจากระบบ</button></div>'; return; }
   document.getElementById('root').innerHTML =
     topbarHtml('⚙️ แอดมิน — '+esc(ORG.short), '<a href="/tech" class="bg-white/20 hover:bg-white/30 rounded-lg px-2.5 py-1 text-white no-underline">หน้าช่าง</a>')+
-    '<nav class="noprint flex flex-wrap gap-1 px-3 bg-white border-b border-line" id="tabs">'+TABS.map(function(t){
+    '<nav class="noprint flex gap-1 px-3 bg-white border-b border-line sticky top-[52px] z-[999]" id="tabs">'+TABS.map(function(t){
       return '<button data-t="'+t[0]+'" onclick="show(\''+t[0]+'\')" class="px-3.5 py-2.5 text-sm font-semibold text-stone-500 border-b-[3px] border-transparent cursor-pointer">'+t[1]+'</button>';}).join('')+'</nav>'+
     '<main class="max-w-7xl mx-auto">'+TABS.map(function(t){ return '<section id="tab_'+t[0]+'" class="hidden"></section>'; }).join('')+'</main>';
   document.getElementById('tab_board').innerHTML = Board.html();
@@ -104,9 +111,9 @@ async function loadReport(){
         Object.entries(c.by_staff).sort(function(a,b){return b[1].total-a[1].total;}).map(function(e){ return '<tr><td class="'+TD+'">'+esc(e[0])+'</td><td class="'+TD+' text-right">'+e[1].total+'</td><td class="'+TD+' text-right">'+e[1].done+'</td></tr>'; }).join('')+'</tbody></table>' : '<p class="text-stone-500 text-sm">ยังไม่มีการมอบหมายงาน</p>')+
         '<h3 class="font-bold m-0 mt-4 mb-2">เสาที่แจ้งซ้ำ (ควรตรวจสาเหตุเชิงลึก)</h3>'+(c.repeat_poles.length? '<ul class="text-sm m-0 pl-5">'+c.repeat_poles.map(function(r){ return '<li>เสา <b>'+esc(r.pole_id)+'</b> — '+r.count+' ครั้ง</li>'; }).join('')+'</ul>' : '<p class="text-stone-500 text-sm">ไม่มี</p>')+'</div>'+
     '</div>'+
-    '<div class="'+T.card+' mt-3 overflow-auto print-break"><h3 class="font-bold m-0 mb-2">รายการงานทั้งหมดในช่วงนี้ ('+D.rows.length+')</h3><table class="w-full text-sm"><thead><tr><th class="'+TH+'">วันที่แจ้ง</th><th class="'+TH+'">เลขที่</th><th class="'+TH+'">เสา</th><th class="'+TH+'">อาการ</th><th class="'+TH+'">สถานะ</th><th class="'+TH+'">ผู้รับผิดชอบ</th><th class="'+TH+'">เสร็จเมื่อ</th><th class="'+TH+'">บันทึกช่าง</th></tr></thead><tbody>'+
+    '<div class="'+T.card+' mt-3 overflow-auto print-break"><h3 class="font-bold m-0 mb-2">รายการงานทั้งหมดในช่วงนี้ ('+D.rows.length+')</h3><div class="tbl-wrap"><table class="w-full text-sm"><thead><tr><th class="'+TH+'">วันที่แจ้ง</th><th class="'+TH+'">เลขที่</th><th class="'+TH+'">เสา</th><th class="'+TH+'">อาการ</th><th class="'+TH+'">สถานะ</th><th class="'+TH+'">ผู้รับผิดชอบ</th><th class="'+TH+'">เสร็จเมื่อ</th><th class="'+TH+'">บันทึกช่าง</th></tr></thead><tbody>'+
       D.rows.map(function(r){ return '<tr><td class="'+TD+' whitespace-nowrap">'+fmtDT(r.created_at)+'</td><td class="'+TD+' font-mono text-xs">'+esc(r.report_id)+'</td><td class="'+TD+' font-bold">'+esc(r.pole_id)+'</td><td class="'+TD+'">'+esc(r.detail)+'</td><td class="'+TD+'"><span class="'+T.pill+' '+(CLS[r.status]||[])[1]+'">'+esc(r.status)+'</span></td><td class="'+TD+'">'+esc(r.assigned_to)+'</td><td class="'+TD+' whitespace-nowrap">'+fmtDT(r.done_at)+'</td><td class="'+TD+'">'+esc(r.staff_note)+'</td></tr>'; }).join('')+
-      '</tbody></table></div>'+
+      '</tbody></table></div></div>'+
     '<div class="mt-8 grid grid-cols-2 gap-8 text-center text-sm hidden print:grid"><div>ลงชื่อ ....................................<br>ผู้จัดทำรายงาน</div><div>ลงชื่อ ....................................<br>ผู้อำนวยการ'+esc(ORG.dept)+'</div></div>';
 
   drawCharts(c, D);
@@ -149,8 +156,8 @@ function renderPoles(){
   var rows=(POLES||[]).filter(function(p){ return !q || (p.pole_id+' '+(p.address||'')+' '+(p.zone||'')).toLowerCase().indexOf(q)>=0; });
   var noGeo=(POLES||[]).filter(function(p){return !p.lat||!p.lng;}).length;
   document.getElementById('pl_count').textContent='('+(POLES||[]).length+' ต้น'+(noGeo?' · ไม่มีพิกัด '+noGeo:'')+')';
-  document.getElementById('pl_list').innerHTML='<table class="w-full text-sm"><thead><tr><th class="'+TH+'">เสา</th><th class="'+TH+'">หมู่</th><th class="'+TH+'">จุดสังเกต</th><th class="'+TH+'">พิกัด</th></tr></thead><tbody>'+
-    rows.slice(0,500).map(function(p){ return '<tr><td class="'+TD+' font-bold">'+esc(p.pole_id)+'</td><td class="'+TD+'">'+esc(p.zone)+'</td><td class="'+TD+'">'+esc(p.address)+'</td><td class="'+TD+'">'+(p.lat&&p.lng?'<a class="text-blue-700" target="_blank" rel="noopener" href="'+gmaps(p.lat,p.lng)+'">🧭 '+p.lat+', '+p.lng+'</a>':'<span class="text-red-700">ไม่มีพิกัด</span>')+'</td></tr>'; }).join('')+'</tbody></table>'+(rows.length>500?'<p class="text-xs text-stone-500">แสดง 500 แรก ใช้ช่องค้นหาเพื่อกรอง</p>':'');
+  document.getElementById('pl_list').innerHTML='<div class="tbl-wrap"><table class="w-full text-sm"><thead><tr><th class="'+TH+'">เสา</th><th class="'+TH+'">หมู่</th><th class="'+TH+'">จุดสังเกต</th><th class="'+TH+'">พิกัด</th></tr></thead><tbody>'+
+    rows.slice(0,500).map(function(p){ return '<tr><td class="'+TD+' font-bold">'+esc(p.pole_id)+'</td><td class="'+TD+'">'+esc(p.zone)+'</td><td class="'+TD+'">'+esc(p.address)+'</td><td class="'+TD+'">'+(p.lat&&p.lng?'<a class="text-blue-700" target="_blank" rel="noopener" href="'+gmaps(p.lat,p.lng)+'">🧭 '+p.lat+', '+p.lng+'</a>':'<span class="text-red-700">ไม่มีพิกัด</span>')+'</td></tr>'; }).join('')+'</tbody></table></div>'+(rows.length>500?'<p class="text-xs text-stone-500">แสดง 500 แรก ใช้ช่องค้นหาเพื่อกรอง</p>':'');
 }
 async function importPoles(){
   var txt=document.getElementById('pl_csv').value.trim(), msg=document.getElementById('pl_msg');
@@ -170,9 +177,9 @@ async function loadBlock(){
   var list=[]; try { list=await api('/api/block'); } catch(e){}
   el.innerHTML='<div class="p-3 max-w-3xl"><div class="'+T.card+'"><h3 class="font-bold m-0 mb-2">บัญชีดำเบอร์โทร ('+list.length+')</h3><p class="text-sm text-stone-600">เบอร์ในรายการนี้จะแจ้งซ่อมไม่ได้ ระบบจะแสดงข้อความให้โทรติดต่อ อบต. แทน</p>'+
     '<div class="flex flex-wrap gap-2 my-3"><input id="bl_p" class="'+T.input+' w-auto flex-1 min-w-[140px] py-2 text-sm" placeholder="เบอร์โทร" inputmode="tel"><input id="bl_r" class="'+T.input+' w-auto flex-1 min-w-[160px] py-2 text-sm" placeholder="เหตุผล" value="แจ้งเท็จซ้ำ"><button class="'+T.btnSm+' bg-red-700 text-white" onclick="blockPhone(document.getElementById(\'bl_p\').value,document.getElementById(\'bl_r\').value)">บล็อก</button></div>'+
-    '<table class="w-full text-sm"><thead><tr><th class="'+TH+'">เบอร์</th><th class="'+TH+'">เหตุผล</th><th class="'+TH+'">วันที่</th><th class="'+TH+'"></th></tr></thead><tbody>'+
+    '<div class="tbl-wrap"><table class="w-full text-sm"><thead><tr><th class="'+TH+'">เบอร์</th><th class="'+TH+'">เหตุผล</th><th class="'+TH+'">วันที่</th><th class="'+TH+'"></th></tr></thead><tbody>'+
     list.map(function(b){ return '<tr><td class="'+TD+' font-mono">'+esc(b.phone)+'</td><td class="'+TD+'">'+esc(b.reason)+'</td><td class="'+TD+'">'+fmtDT(b.blocked_at)+'</td><td class="'+TD+' text-right"><button class="text-blue-700 underline text-sm" onclick="unblock(\''+esc(b.phone)+'\')">ปลดบล็อก</button></td></tr>'; }).join('')||'<tr><td class="'+TD+' text-stone-500" colspan="4">ยังไม่มีเบอร์ในบัญชีดำ</td></tr>'+
-    '</tbody></table></div></div>';
+    '</tbody></table></div></div></div>';
 }
 async function blockPhone(phone, reason){
   if (reason===undefined){ reason=prompt('บล็อกเบอร์ '+phone+' — ระบุเหตุผล:','แจ้งเท็จซ้ำ'); if(reason===null) return; }
@@ -192,9 +199,9 @@ async function loadUsers(){
     '<label class="block font-bold mt-2 mb-1 text-sm">รหัสผ่าน <span class="text-stone-400 font-normal">(เว้นว่างถ้าไม่เปลี่ยน)</span></label><input id="us_p" class="'+T.input+'" type="text" placeholder="อย่างน้อย 6 ตัว">'+
     '<label class="flex items-center gap-2 mt-3 text-sm"><input type="checkbox" id="us_a" checked class="size-4 accent-brand"> เปิดใช้งาน</label>'+
     '<button class="'+T.btn+' w-full mt-3" onclick="saveUser()">💾 บันทึกบัญชี</button><p class="text-xs text-stone-500 mt-2">บัญชี <b>admin</b> หลักใช้รหัสจาก ADMIN_TOKEN ใน Vercel — ใช้ตั้งต้นและกู้คืนระบบ ไม่แสดงในรายการนี้</p></div>'+
-    '<div class="'+T.card+'"><h3 class="font-bold m-0 mb-2">บัญชีทั้งหมด ('+list.length+')</h3><table class="w-full text-sm"><thead><tr><th class="'+TH+'">ผู้ใช้</th><th class="'+TH+'">ชื่อ</th><th class="'+TH+'">สิทธิ์</th><th class="'+TH+'">เข้าใช้ล่าสุด</th><th class="'+TH+'"></th></tr></thead><tbody>'+
+    '<div class="'+T.card+'"><h3 class="font-bold m-0 mb-2">บัญชีทั้งหมด ('+list.length+')</h3><div class="tbl-wrap"><table class="w-full text-sm"><thead><tr><th class="'+TH+'">ผู้ใช้</th><th class="'+TH+'">ชื่อ</th><th class="'+TH+'">สิทธิ์</th><th class="'+TH+'">เข้าใช้ล่าสุด</th><th class="'+TH+'"></th></tr></thead><tbody>'+
     list.map(function(u){ return '<tr class="'+(u.active?'':'opacity-50')+'"><td class="'+TD+' font-mono">'+esc(u.username)+'</td><td class="'+TD+'">'+esc(u.display_name)+(u.active?'':' <span class="text-xs text-red-700">(ปิด)</span>')+'</td><td class="'+TD+'">'+(u.role==='admin'?'แอดมิน':'ช่าง')+'</td><td class="'+TD+' text-xs">'+(u.last_login?fmtDT(u.last_login):'-')+'</td><td class="'+TD+' text-right whitespace-nowrap"><button class="text-blue-700 underline text-sm mr-2" onclick=\'editUser('+JSON.stringify(u)+')\'>แก้</button><button class="text-red-700 underline text-sm" onclick="delUser(\''+esc(u.username)+'\')">ลบ</button></td></tr>'; }).join('')||'<tr><td class="'+TD+' text-stone-500" colspan="5">ยังไม่มีบัญชี — สร้างบัญชีช่างคนแรกทางซ้าย</td></tr>'+
-    '</tbody></table></div></div>';
+    '</tbody></table></div></div></div>';
 }
 function editUser(u){ document.getElementById('us_u').value=u.username; document.getElementById('us_n').value=u.display_name; document.getElementById('us_r').value=u.role; document.getElementById('us_a').checked=u.active; document.getElementById('us_p').value=''; document.getElementById('us_u').focus(); }
 async function saveUser(){

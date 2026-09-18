@@ -12,7 +12,9 @@
 ```
 web/
 ├─ public/            หน้าเว็บ (index.html ชาวบ้าน · tech.html ช่าง · admin.html แอดมิน)
-│  └─ assets/         config.js = ชื่อ อบต./เบอร์/พิกัดศูนย์แผนที่ (เปลี่ยนที่เดียว) · common.js · app.css · logo.png (ใส่เอง)
+│  ├─ assets/         config.js = ชื่อ อบต./เบอร์/พิกัดศูนย์แผนที่ (เปลี่ยนที่เดียว) · common.js · app.css · logo.jpg
+│  ├─ icons/          ไอคอนแอป (สร้างจาก logo.jpg)
+│  ├─ manifest.webmanifest + sw.js   PWA: ติดตั้งเป็นแอปบนมือถือ/แท็บเล็ต/คอม เปิดได้แม้เน็ตสะดุด (API ไม่แคช)
 ├─ api/               Serverless Functions: pole, report, login, me, users, reports, update, block, poles, stats, ping
 ├─ lib/               db.js (Supabase + กฎกันแจ้งมั่ว) · auth.js (ล็อกอิน) · notify.js (อีเมล Resend) · mockdb.js (ทดลองในเครื่อง)
 ├─ supabase/schema.sql  สร้างตาราง poles / reports / blocklist / staff_users (มีเสาทดลอง 1/1 ที่ 18.582125, 98.952782)

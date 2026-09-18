@@ -4,7 +4,7 @@ const http = require('http'), fs = require('fs'), path = require('path'), url = 
 process.env.ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'admin1234';
 process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'dev-secret';
 const PORT = process.env.PORT || 3000;
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.jpg': 'image/jpeg', '.webmanifest': 'application/manifest+json' };
 const REWRITES = { '/': '/index.html', '/r': '/index.html', '/admin': '/admin.html', '/tech': '/tech.html' };
 
 http.createServer(async (req, res) => {

@@ -23,6 +23,22 @@ function fmtD(iso){ if(!iso) return ''; return new Date(iso).toLocaleDateString(
 function gmaps(lat,lng){ return 'https://www.google.com/maps/dir/?api=1&destination='+lat+','+lng; }   // เปิดโหมดนำทางทันที
 function ago(iso){ var h=(Date.now()-new Date(iso))/36e5; if(h<1) return Math.round(h*60)+' นาที'; if(h<48) return Math.round(h)+' ชม.'; return Math.round(h/24)+' วัน'; }
 
+/* ---------- PWA: ติดตั้งเป็นแอปบนมือถือ/แท็บเล็ต/คอม ---------- */
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(function(){});
+var _installEvt = null;
+window.addEventListener('beforeinstallprompt', function(e){
+  e.preventDefault(); _installEvt = e;
+  if (localStorage.getItem('saofi_install_hide')) return;
+  var bar=document.createElement('div'); bar.id='installBar';
+  bar.className='noprint bg-brand-dark text-white text-sm px-4 py-2.5 flex items-center gap-3 shadow-lg';
+  bar.innerHTML='<span class="flex-1">📲 ติดตั้งเป็นแอปบนเครื่อง เปิดใช้เร็วขึ้น ไม่ต้องพิมพ์ลิงก์</span>'+
+    '<button class="bg-white text-brand font-bold rounded-lg px-3 py-1.5" id="installGo">ติดตั้ง</button>'+
+    '<button class="opacity-70 px-2" id="installNo" aria-label="ปิด">✕</button>';
+  document.body.appendChild(bar);
+  document.getElementById('installGo').onclick=function(){ bar.remove(); if(_installEvt){ _installEvt.prompt(); _installEvt=null; } };
+  document.getElementById('installNo').onclick=function(){ bar.remove(); localStorage.setItem('saofi_install_hide','1'); };
+});
+
 /* ---------- session ---------- */
 var Auth = {
   get: function(){ try { return JSON.parse(localStorage.getItem('saofi_session')||'null'); } catch(e){ return null; } },
@@ -139,6 +155,12 @@ Board.render = function(){
     '</div>';
   }).join('') || '<p class="text-center text-stone-500 py-8">ไม่มีรายการ</p>';
 };
+/** มือถือ/แท็บเล็ตแนวตั้ง: เลือกดูแผนที่หรือรายการทีละอย่าง (จอกว้าง ≥1024px แสดงคู่กันเสมอ) */
+Board.view=function(v){
+  var b=document.getElementById('board'); b.classList.toggle('board-map',v==='map'); b.classList.toggle('board-list',v==='list');
+  document.querySelectorAll('#viewToggle button').forEach(function(x,i){ var on=(i===0)===(v==='map'); x.className='flex-1 py-2 '+(on?'bg-brand text-white':'bg-white text-stone-600'); });
+  if(v==='map') setTimeout(function(){ Board.map.invalidateSize(); if(Board._pts&&Board._pts.length) Board.map.fitBounds(Board._pts,{padding:[30,30],maxZoom:17}); },50);
+};
 Board.setStatus=function(v){ document.getElementById('f_status').value=v; Board.render(); };
 Board.save = async function(rid,id){
   try {
@@ -157,5 +179,6 @@ Board.html = function(){
     '<input id="f_q" class="'+sel+' min-w-[180px]" placeholder="🔍 ค้นเลขเสา/ชื่อ/เบอร์/เลขที่" oninput="Board.render()">'+
     '<label class="text-sm text-stone-600 flex items-center gap-1.5 cursor-pointer"><input type="checkbox" class="size-4 accent-brand" onchange="Board.filter.mine=this.checked;Board.render()"> งานของฉัน</label>'+
     '<button class="'+T.btnSm+' border border-brand text-brand bg-white hover:bg-paper" onclick="Board.load()">🔄 รีเฟรช</button><span class="text-sm text-stone-500" id="f_count"></span></div>'+
-    '<div class="flex flex-wrap gap-3 px-3 pb-3"><div id="map" class="flex-[1_1_380px] h-[40vh] min-h-[260px] lg:h-[65vh] lg:min-h-[380px] rounded-xl border border-line"></div><div class="flex-[1_1_420px] lg:max-h-[65vh] lg:overflow-auto" id="list"></div></div>';
+    '<div id="viewToggle" class="noprint px-3 pb-2"><div class="flex rounded-lg border border-line overflow-hidden text-sm font-semibold"><button class="flex-1 py-2 bg-white text-stone-600" onclick="Board.view(\'map\')">🗺️ แผนที่</button><button class="flex-1 py-2 bg-brand text-white" onclick="Board.view(\'list\')">📋 รายการ</button></div></div>'+
+    '<div id="board" class="board-list flex flex-wrap gap-3 px-3 pb-3"><div id="map" class="flex-[1_1_380px] h-[40vh] min-h-[260px] lg:h-[65vh] lg:min-h-[380px] rounded-xl border border-line"></div><div class="flex-[1_1_420px] lg:max-h-[65vh] lg:overflow-auto" id="list"></div></div>';
 };
