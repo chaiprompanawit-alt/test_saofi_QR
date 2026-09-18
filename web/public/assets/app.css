@@ -1,7 +1,17 @@
-/* ส่วนเล็ก ๆ ที่ Tailwind utility ทำไม่สะดวก: สีสถานะ (ใช้จาก JS), Leaflet, พิมพ์รายงาน, รองรับมือถือ/แท็บเล็ต/คอม */
-:root{ --new:#c62828; --recv:#ef6c00; --prog:#1565c0; --done:#2e7d32; --close:#607d8b; --fake:#424242; }
+:root{ --new:#b42318; --recv:#b54708; --prog:#1e4e9a; --done:#067647; --close:#475467; --fake:#101828; --sla:#f2b632; --sla-ink:#8a5b00; }
+/* pill สถานะ: สีพื้น + สัญลักษณ์ + ข้อความ (ไม่พึ่งสีอย่างเดียว) */
 .p-new{background:var(--new)}.p-recv{background:var(--recv)}.p-prog{background:var(--prog)}.p-done{background:var(--done)}.p-close{background:var(--close)}.p-fake{background:var(--fake)}
 .s-new{border-left-color:var(--new)}.s-recv{border-left-color:var(--recv)}.s-prog{border-left-color:var(--prog)}.s-done{border-left-color:var(--done)}.s-close{border-left-color:var(--close)}.s-fake{border-left-color:var(--fake)}
+/* งานค้างเกิน SLA: ขอบทองหนา + พื้นอ่อน ให้เด่นกว่าทุกใบ */
+.sla-over{ border-color:var(--sla); box-shadow:inset 0 0 0 1px var(--sla); background:#fffdf5; }
+.sla-over .sla-tag{ display:inline-flex; }
+.sla-tag{ display:none; }
+/* ปุ่ม/ชิป: กดแล้วยุบเล็กน้อย (feedback เท่านั้น) */
+button, a[class*="rounded"]{ transition:background-color .15s, color .15s, border-color .15s, transform .1s; }
+button:active, a[class*="rounded"]:active{ transform:scale(.98); }
+@media (prefers-reduced-motion:reduce){ *{ transition:none!important; } button:active, a:active{ transform:none; } }
+/* ไอคอน SVG inline (Tabler) ให้สูงเท่าตัวอักษร */
+.ic{ width:1.15em; height:1.15em; flex:none; vertical-align:-0.2em; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 .leaflet-container{font-family:inherit;z-index:1}
 .leaflet-popup-content{margin:10px 12px;line-height:1.5}
 

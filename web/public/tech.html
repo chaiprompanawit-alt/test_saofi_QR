@@ -12,16 +12,18 @@
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%92%A1%3C/text%3E%3C/svg%3E">
 <title>หน้าช่างไฟ — แจ้งซ่อมไฟฟ้า</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 <style type="text/tailwindcss">
-  @theme { --color-brand: #1e4e9a; --color-brand-dark: #163a73; --color-accent: #f2b632; --color-paper: #f3f6fb; --color-line: #d9e1ee; --font-sans: "Sarabun", "Segoe UI", system-ui, sans-serif; }
+  @theme { --color-brand: #1e4e9a; --color-brand-dark: #163a73; --color-brand-soft: #e8eef8; --color-accent: #f2b632; --color-accent-soft: #fdf3d8; --color-accent-dark: #8a5b00; --color-paper: #f3f6fb; --color-line: #d9e1ee; --color-ink: #1f2937; --color-muted: #475569; --font-sans: "Sarabun", "Segoe UI", system-ui, sans-serif; }
 </style>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="stylesheet" href="assets/app.css">
 <script src="assets/config.js"></script>
 </head>
-<body class="bg-paper text-stone-800 font-sans">
+<body class="bg-paper text-ink font-sans">
 <div id="root"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -30,9 +32,9 @@
   function start(){
     var me = Auth.get();
     document.getElementById('root').innerHTML =
-      topbarHtml('🛠️ งานซ่อมไฟฟ้า — '+esc(ORG.short), me.role==='admin' ? '<a href="/admin" class="bg-white/20 hover:bg-white/30 rounded-lg px-2.5 py-1 text-white no-underline">หน้าแอดมิน</a>' : '')+
+      topbarHtml('งานซ่อมไฟฟ้าสาธารณะ', me.role==='admin' ? '<a href="/admin" class="bg-white/15 hover:bg-white/25 rounded-[10px] px-2.5 py-1 text-white no-underline">หน้าแอดมิน</a>' : '')+
       '<div class="max-w-7xl mx-auto">'+Board.html()+
-      '<div class="noprint px-3 pb-4"><details class="text-sm text-stone-600"><summary class="cursor-pointer">🔑 เปลี่ยนรหัสผ่านของฉัน</summary>'+
+      '<div class="noprint px-3 pb-4"><details class="text-sm text-muted"><summary class="cursor-pointer inline-flex items-center gap-1 py-2">'+ico('lock')+'เปลี่ยนรหัสผ่านของฉัน</summary>'+
       '<div class="flex flex-wrap gap-2 mt-2 items-end"><input id="pw_o" type="password" class="'+T.input+' w-auto flex-1 min-w-[140px] py-2 text-sm" placeholder="รหัสเดิม"><input id="pw_n" type="password" class="'+T.input+' w-auto flex-1 min-w-[140px] py-2 text-sm" placeholder="รหัสใหม่ (6 ตัวขึ้นไป)"><button class="'+T.btnSm+' bg-brand text-white" onclick="changePw()">บันทึก</button></div></details></div></div>';
     Board.initMap();
     Board.load().catch(function(e){ alert('โหลดข้อมูลไม่สำเร็จ: '+e.message); });

@@ -12,34 +12,38 @@
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%92%A1%3C/text%3E%3C/svg%3E">
 <title>แอดมิน — แจ้งซ่อมไฟฟ้า</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 <style type="text/tailwindcss">
-  @theme { --color-brand: #1e4e9a; --color-brand-dark: #163a73; --color-accent: #f2b632; --color-paper: #f3f6fb; --color-line: #d9e1ee; --font-sans: "Sarabun", "Segoe UI", system-ui, sans-serif; }
+  @theme { --color-brand: #1e4e9a; --color-brand-dark: #163a73; --color-brand-soft: #e8eef8; --color-accent: #f2b632; --color-accent-soft: #fdf3d8; --color-accent-dark: #8a5b00; --color-paper: #f3f6fb; --color-line: #d9e1ee; --color-ink: #1f2937; --color-muted: #475569; --font-sans: "Sarabun", "Segoe UI", system-ui, sans-serif; }
 </style>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="stylesheet" href="assets/app.css">
 <script src="assets/config.js"></script>
 </head>
-<body class="bg-paper text-stone-800 font-sans">
+<body class="bg-paper text-ink font-sans">
 <div id="root"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="assets/common.js"></script>
 <script>
-var TABS = [['board','📋 ภาพรวมงาน'],['report','📊 รายงาน'],['poles','🗼 เสาไฟ'],['block','🚫 บัญชีดำ'],['users','👥 ผู้ใช้']];
-var TH = 'px-3 py-2 text-left font-bold bg-slate-50 border-b border-line', TD = 'px-3 py-2 border-b border-line align-top';
+var TABS = [['board','ภาพรวมงาน'],['report','รายงาน'],['poles','เสาไฟ'],['block','บัญชีดำ'],['users','ผู้ใช้']];
+var TH = 'px-3 py-2 text-left font-bold text-muted text-sm bg-paper border-b-2 border-line whitespace-nowrap', TD = 'px-3 py-2 border-b border-line align-top';
 var charts = {};
 
 function start(){
   var me = Auth.get();
-  if (me.role !== 'admin') { document.getElementById('root').innerHTML = '<div class="max-w-sm mx-auto mt-14 '+T.card+' text-center"><div class="text-4xl">⛔</div><p class="mt-2">บัญชีนี้เป็นสิทธิ์ช่าง ไม่สามารถเข้าหน้าแอดมินได้</p><a href="/tech" class="'+T.btn+' mt-3">ไปหน้าช่าง</a><br><button class="text-sm text-stone-500 mt-3 underline" onclick="Auth.clear()">ออกจากระบบ</button></div>'; return; }
+  if (me.role !== 'admin') { document.getElementById('root').innerHTML = '<div class="max-w-sm mx-auto mt-14 '+T.card+' text-center"><div class="mx-auto w-14 h-14 rounded-full bg-accent-soft text-accent-dark flex items-center justify-center">'+ico('lock')+'</div><p class="mt-3 font-semibold">บัญชีนี้เป็นสิทธิ์ช่าง ไม่สามารถเข้าหน้าแอดมินได้</p><a href="/tech" class="'+T.btn+' mt-3">ไปหน้าช่าง</a><br><button class="text-sm text-muted mt-3 underline" onclick="Auth.clear()">ออกจากระบบ</button></div>'; return; }
   document.getElementById('root').innerHTML =
-    topbarHtml('⚙️ แอดมิน — '+esc(ORG.short), '<a href="/tech" class="bg-white/20 hover:bg-white/30 rounded-lg px-2.5 py-1 text-white no-underline">หน้าช่าง</a>')+
-    '<nav class="noprint flex gap-1 px-3 bg-white border-b border-line sticky top-[52px] z-[999]" id="tabs">'+TABS.map(function(t){
-      return '<button data-t="'+t[0]+'" onclick="show(\''+t[0]+'\')" class="px-3.5 py-2.5 text-sm font-semibold text-stone-500 border-b-[3px] border-transparent cursor-pointer">'+t[1]+'</button>';}).join('')+'</nav>'+
+    topbarHtml('แอดมิน งานซ่อมไฟฟ้า', '<a href="/tech" class="bg-white/15 hover:bg-white/25 rounded-[10px] px-2.5 py-1 text-white no-underline">หน้าช่าง</a>')+
+    '<nav class="noprint flex gap-1 px-3 bg-white border-b border-line sticky z-[999]" id="tabs" style="top:var(--topbar-h,56px)">'+TABS.map(function(t){
+      return '<button data-t="'+t[0]+'" onclick="show(\''+t[0]+'\')" class="px-3.5 py-2.5 text-base font-semibold text-muted border-b-[3px] border-transparent cursor-pointer">'+t[1]+'</button>';}).join('')+'</nav>'+
     '<main class="max-w-7xl mx-auto">'+TABS.map(function(t){ return '<section id="tab_'+t[0]+'" class="hidden"></section>'; }).join('')+'</main>';
+  // แถบแท็บเกาะใต้ header: วัดความสูง header จริง (Tailwind CDN ใส่สไตล์ทีหลัง จึงต้องวัดซ้ำเมื่อขนาดเปลี่ยน)
+  var hd=document.querySelector('header.sticky'); if(hd){ var setH=function(){ document.documentElement.style.setProperty('--topbar-h', hd.offsetHeight+'px'); }; setH(); if(window.ResizeObserver) new ResizeObserver(setH).observe(hd); else setTimeout(setH,1500); }
   document.getElementById('tab_board').innerHTML = Board.html();
   Board.onBlock = blockPhone;
   Board.initMap(); Board.load().catch(function(e){ alert('โหลดข้อมูลไม่สำเร็จ: '+e.message); });
@@ -47,7 +51,7 @@ function start(){
 }
 function show(t){
   TABS.forEach(function(x){ document.getElementById('tab_'+x[0]).classList.toggle('hidden', x[0]!==t); });
-  document.querySelectorAll('#tabs button').forEach(function(b){ var on=b.dataset.t===t; b.classList.toggle('text-brand',on); b.classList.toggle('border-brand',on); b.classList.toggle('text-stone-500',!on); });
+  document.querySelectorAll('#tabs button').forEach(function(b){ var on=b.dataset.t===t; b.classList.toggle('text-brand',on); b.classList.toggle('border-brand',on); b.classList.toggle('text-muted',!on); });
   location.hash = t;
   if (t==='board' && Board.map) setTimeout(function(){ Board.map.invalidateSize(); }, 50);
   if (t==='report') initReport();
@@ -62,24 +66,27 @@ function initReport(){
   if (RP.inited) return; RP.inited = true;
   document.getElementById('tab_report').innerHTML =
     '<div class="noprint flex flex-wrap items-center gap-2 p-3">'+
-      '<div class="inline-flex rounded-lg border border-line overflow-hidden"><button id="pw" class="px-3 py-1.5 text-sm font-semibold" onclick="setPeriod(\'week\')">รายสัปดาห์</button><button id="pm" class="px-3 py-1.5 text-sm font-semibold" onclick="setPeriod(\'month\')">รายเดือน</button></div>'+
-      '<button class="'+T.btnSm+' border border-line bg-white" onclick="shift(-1)">◀ ก่อนหน้า</button>'+
+      '<div class="inline-flex rounded-[10px] border border-line overflow-hidden"><button id="pw" class="px-3 py-1.5 text-sm font-semibold" onclick="setPeriod(\'week\')">รายสัปดาห์</button><button id="pm" class="px-3 py-1.5 text-sm font-semibold" onclick="setPeriod(\'month\')">รายเดือน</button></div>'+
+      '<button class="'+T.btnOut+'" onclick="shift(-1)">◀ ก่อนหน้า</button>'+
       '<input type="date" id="rp_date" class="'+T.input+' w-auto py-1.5 text-sm" value="'+RP.date+'" onchange="RP.date=this.value;loadReport()">'+
-      '<button class="'+T.btnSm+' border border-line bg-white" onclick="shift(1)">ถัดไป ▶</button>'+
+      '<button class="'+T.btnOut+'" onclick="shift(1)">ถัดไป ▶</button>'+
       '<span class="flex-1"></span>'+
-      '<button class="'+T.btnSm+' border border-brand text-brand bg-white" onclick="exportCsv()">⬇ CSV</button>'+
-      '<button class="'+T.btnSm+' bg-brand text-white" onclick="window.print()">🖨️ พิมพ์ / PDF</button></div>'+
+      '<button class="'+T.btnOut+'" onclick="exportCsv()">'+ico('down')+'CSV</button>'+
+      '<button class="'+T.btnSm+' bg-brand text-white" onclick="window.print()">'+ico('print')+'พิมพ์ / PDF</button></div>'+
     '<div id="rp_body" class="p-3"></div>';
   setPeriod('week');
 }
-function setPeriod(p){ RP.period=p; ['pw','pm'].forEach(function(id){ var on=(id==='pw')===(p==='week'); var b=document.getElementById(id); b.className='px-3 py-1.5 text-sm font-semibold '+(on?'bg-brand text-white':'bg-white text-stone-600'); }); loadReport(); }
+function setPeriod(p){ RP.period=p; ['pw','pm'].forEach(function(id){ var on=(id==='pw')===(p==='week'); var b=document.getElementById(id); b.className='px-3 py-1.5 text-sm font-semibold '+(on?'bg-brand text-white':'bg-white text-muted'); }); loadReport(); }
 function shift(n){ var d=new Date(RP.date); if(RP.period==='month') d.setMonth(d.getMonth()+n); else d.setDate(d.getDate()+7*n); RP.date=d.toISOString().slice(0,10); document.getElementById('rp_date').value=RP.date; loadReport(); }
-function delta(a,b,invert){ if(b==null||a==null) return ''; var d=a-b; if(!d) return '<span class="text-stone-400 text-xs">เท่าเดิม</span>'; var bad = invert ? d<0 : d>0; return '<span class="text-xs '+(bad?'text-red-700':'text-green-700')+'">'+(d>0?'▲ +':'▼ ')+d+' จากช่วงก่อน</span>'; }
-function kpi(v,l,d){ return '<div class="'+T.card+' print-break"><div class="text-3xl font-extrabold text-brand">'+(v==null?'–':v)+'</div><div class="text-sm text-stone-500">'+l+'</div>'+(d||'')+'</div>'; }
+function delta(a,b,invert){ if(b==null||a==null) return ''; var d=a-b; if(!d) return '<span class="text-muted text-xs">เท่าเดิม</span>'; var bad = invert ? d<0 : d>0; return '<span class="text-xs font-semibold '+(bad?'text-[var(--new)]':'text-[var(--done)]')+'">'+(d>0?'▲ +':'▼ ')+d+' จากช่วงก่อน</span>'; }
+// KPI หลัก (big=true) ตัวเลขใหญ่ พื้นน้ำเงินอ่อน · KPI รอง เล็กกว่า
+function kpi(v,l,d,big,tone){ var t=tone||'text-brand'; return big
+  ? '<div class="'+T.card+' print-break bg-brand-soft border-brand/30"><div class="text-sm font-semibold text-muted">'+l+'</div><div class="text-5xl font-extrabold '+t+' leading-none my-1">'+(v==null?'–':v)+'</div>'+(d||'')+'</div>'
+  : '<div class="'+T.card+' print-break py-3"><div class="text-2xl font-extrabold '+t+'">'+(v==null?'–':v)+'</div><div class="text-sm text-muted">'+l+'</div>'+(d||'')+'</div>'; }
 
 async function loadReport(){
-  var body=document.getElementById('rp_body'); body.innerHTML='<p class="text-stone-500">กำลังคำนวณ…</p>';
-  try { RP.data = await api('/api/stats?period='+RP.period+'&date='+RP.date); } catch(e){ body.innerHTML='<p class="text-red-700">'+esc(e.message)+'</p>'; return; }
+  var body=document.getElementById('rp_body'); body.innerHTML='<p class="text-muted">กำลังคำนวณ…</p>';
+  try { RP.data = await api('/api/stats?period='+RP.period+'&date='+RP.date); } catch(e){ body.innerHTML='<p class="text-[var(--new)]">'+esc(e.message)+'</p>'; return; }
   var D=RP.data, c=D.current, p=D.previous;
   var endShow = new Date(new Date(D.end).getTime()-1);
   var title = (RP.period==='week'?'รายงานประจำสัปดาห์':'รายงานประจำเดือน')+' — งานซ่อมไฟฟ้าสาธารณะ';
@@ -87,14 +94,16 @@ async function loadReport(){
 
   var moos = Object.keys(c.by_moo).sort(function(a,b){return a-b;});
   body.innerHTML =
-    '<div class="text-center mb-3"><h2 class="text-xl font-extrabold text-brand m-0">'+title+'</h2><div class="text-stone-600">'+esc(ORG.name)+' · '+range+'</div><div class="text-xs text-stone-400">จัดทำเมื่อ '+fmtDT(new Date().toISOString())+' · SLA '+D.sla_working_days+' วันทำการ</div></div>'+
-    '<div class="grid grid-cols-2 md:grid-cols-4 gap-3">'+
-      kpi(c.total,'รับแจ้งในช่วงนี้',delta(c.total,p.total))+
+    '<div class="flex items-center gap-3 mb-4"><img src="'+ORG.logo+'" alt="" class="h-12 w-12 rounded-full border border-line object-cover" onerror="this.remove()"><div><h2 class="text-xl font-extrabold text-brand m-0">'+title+'</h2><div class="text-muted">'+esc(ORG.name)+' · '+range+'</div><div class="text-xs text-muted">จัดทำเมื่อ '+fmtDT(new Date().toISOString())+' · SLA '+D.sla_working_days+' วันทำการ</div></div></div>'+
+    '<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">'+
+      kpi(c.total,'รับแจ้งในช่วงนี้',delta(c.total,p.total),true)+
+      kpi(c.sla_pct==null?'–':c.sla_pct+'%','เสร็จภายใน SLA '+D.sla_working_days+' วันทำการ',delta(c.sla_pct,p.sla_pct,true),true,(c.sla_pct!=null&&c.sla_pct<80)?'text-accent-dark':'text-[var(--done)]')+
+      kpi(D.backlog_total,'งานค้างทั้งระบบ (ณ ปัจจุบัน)','',true,D.backlog_total>0?'text-[var(--new)]':'text-brand')+
+    '</div>'+
+    '<div class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-3">'+
       kpi(c.done,'ซ่อมเสร็จ/ปิดงาน',delta(c.done,p.done,true))+
-      kpi(c.sla_pct==null?'–':c.sla_pct+'%','เสร็จภายใน SLA '+D.sla_working_days+' วันทำการ',delta(c.sla_pct,p.sla_pct,true))+
       kpi(c.avg_hours_to_done==null?'–':(c.avg_hours_to_done<48? c.avg_hours_to_done+' ชม.' : Math.round(c.avg_hours_to_done/24*10)/10+' วัน'),'เวลาเฉลี่ยจนซ่อมเสร็จ')+
       kpi(c.open,'ยังค้างจากช่วงนี้')+
-      kpi(D.backlog_total,'งานค้างทั้งระบบ (ณ ปัจจุบัน)')+
       kpi(c.fake,'แจ้งเท็จ',delta(c.fake,p.fake))+
       kpi(c.repeat_poles.length,'เสาที่แจ้งซ้ำ >1 ครั้ง')+
     '</div>'+
@@ -105,14 +114,14 @@ async function loadReport(){
     '</div>'+
     '<div class="grid md:grid-cols-2 gap-3 mt-3">'+
       '<div class="'+T.card+' print-break overflow-auto"><h3 class="font-bold m-0 mb-2">ตารางสรุปตามหมู่</h3><table class="w-full text-sm border-collapse"><thead><tr><th class="'+TH+'">หมู่</th><th class="'+TH+' text-right">แจ้ง</th><th class="'+TH+' text-right">เสร็จ</th><th class="'+TH+' text-right">ค้าง</th><th class="'+TH+' text-right">เท็จ</th></tr></thead><tbody>'+
-        moos.map(function(m){ var x=c.by_moo[m]; return '<tr><td class="'+TD+'">หมู่ '+esc(m)+'</td><td class="'+TD+' text-right">'+x.total+'</td><td class="'+TD+' text-right text-green-700">'+x.done+'</td><td class="'+TD+' text-right text-red-700">'+x.open+'</td><td class="'+TD+' text-right">'+x.fake+'</td></tr>'; }).join('')+
+        moos.map(function(m){ var x=c.by_moo[m]; return '<tr><td class="'+TD+'">หมู่ '+esc(m)+'</td><td class="'+TD+' text-right">'+x.total+'</td><td class="'+TD+' text-right text-[var(--done)] font-semibold">'+x.done+'</td><td class="'+TD+' text-right text-[var(--new)] font-semibold">'+x.open+'</td><td class="'+TD+' text-right">'+x.fake+'</td></tr>'; }).join('')+
         '<tr class="font-bold"><td class="'+TD+'">รวม</td><td class="'+TD+' text-right">'+c.total+'</td><td class="'+TD+' text-right">'+c.done+'</td><td class="'+TD+' text-right">'+c.open+'</td><td class="'+TD+' text-right">'+c.fake+'</td></tr></tbody></table></div>'+
       '<div class="'+T.card+' print-break"><h3 class="font-bold m-0 mb-2">ผลงานช่าง</h3>'+(Object.keys(c.by_staff).length? '<table class="w-full text-sm"><thead><tr><th class="'+TH+'">ผู้รับผิดชอบ</th><th class="'+TH+' text-right">รับงาน</th><th class="'+TH+' text-right">เสร็จ</th></tr></thead><tbody>'+
-        Object.entries(c.by_staff).sort(function(a,b){return b[1].total-a[1].total;}).map(function(e){ return '<tr><td class="'+TD+'">'+esc(e[0])+'</td><td class="'+TD+' text-right">'+e[1].total+'</td><td class="'+TD+' text-right">'+e[1].done+'</td></tr>'; }).join('')+'</tbody></table>' : '<p class="text-stone-500 text-sm">ยังไม่มีการมอบหมายงาน</p>')+
-        '<h3 class="font-bold m-0 mt-4 mb-2">เสาที่แจ้งซ้ำ (ควรตรวจสาเหตุเชิงลึก)</h3>'+(c.repeat_poles.length? '<ul class="text-sm m-0 pl-5">'+c.repeat_poles.map(function(r){ return '<li>เสา <b>'+esc(r.pole_id)+'</b> — '+r.count+' ครั้ง</li>'; }).join('')+'</ul>' : '<p class="text-stone-500 text-sm">ไม่มี</p>')+'</div>'+
+        Object.entries(c.by_staff).sort(function(a,b){return b[1].total-a[1].total;}).map(function(e){ return '<tr><td class="'+TD+'">'+esc(e[0])+'</td><td class="'+TD+' text-right">'+e[1].total+'</td><td class="'+TD+' text-right">'+e[1].done+'</td></tr>'; }).join('')+'</tbody></table>' : '<p class="text-muted text-sm">ยังไม่มีการมอบหมายงาน</p>')+
+        '<h3 class="font-bold m-0 mt-4 mb-2">เสาที่แจ้งซ้ำ (ควรตรวจสาเหตุเชิงลึก)</h3>'+(c.repeat_poles.length? '<ul class="text-sm m-0 pl-5">'+c.repeat_poles.map(function(r){ return '<li>เสา <b>'+esc(r.pole_id)+'</b> — '+r.count+' ครั้ง</li>'; }).join('')+'</ul>' : '<p class="text-muted text-sm">ไม่มี</p>')+'</div>'+
     '</div>'+
     '<div class="'+T.card+' mt-3 overflow-auto print-break"><h3 class="font-bold m-0 mb-2">รายการงานทั้งหมดในช่วงนี้ ('+D.rows.length+')</h3><div class="tbl-wrap"><table class="w-full text-sm"><thead><tr><th class="'+TH+'">วันที่แจ้ง</th><th class="'+TH+'">เลขที่</th><th class="'+TH+'">เสา</th><th class="'+TH+'">อาการ</th><th class="'+TH+'">สถานะ</th><th class="'+TH+'">ผู้รับผิดชอบ</th><th class="'+TH+'">เสร็จเมื่อ</th><th class="'+TH+'">บันทึกช่าง</th></tr></thead><tbody>'+
-      D.rows.map(function(r){ return '<tr><td class="'+TD+' whitespace-nowrap">'+fmtDT(r.created_at)+'</td><td class="'+TD+' font-mono text-xs">'+esc(r.report_id)+'</td><td class="'+TD+' font-bold">'+esc(r.pole_id)+'</td><td class="'+TD+'">'+esc(r.detail)+'</td><td class="'+TD+'"><span class="'+T.pill+' '+(CLS[r.status]||[])[1]+'">'+esc(r.status)+'</span></td><td class="'+TD+'">'+esc(r.assigned_to)+'</td><td class="'+TD+' whitespace-nowrap">'+fmtDT(r.done_at)+'</td><td class="'+TD+'">'+esc(r.staff_note)+'</td></tr>'; }).join('')+
+      D.rows.map(function(r){ var ov=slaOver(r); return '<tr'+(ov?' class="bg-accent-soft"':'')+'><td class="'+TD+' whitespace-nowrap">'+fmtDT(r.created_at)+'</td><td class="'+TD+' font-mono text-xs">'+esc(r.report_id)+'</td><td class="'+TD+' font-bold">'+esc(r.pole_id)+'</td><td class="'+TD+'">'+esc(r.detail)+'</td><td class="'+TD+'">'+pill(r.status)+(ov?'<br><span class="text-xs font-bold text-accent-dark">เกิน SLA '+ov+' วัน</span>':'')+'</td><td class="'+TD+'">'+esc(r.assigned_to)+'</td><td class="'+TD+' whitespace-nowrap">'+fmtDT(r.done_at)+'</td><td class="'+TD+'">'+esc(r.staff_note)+'</td></tr>'; }).join('')+
       '</tbody></table></div></div>'+
     '<div class="mt-8 grid grid-cols-2 gap-8 text-center text-sm hidden print:grid"><div>ลงชื่อ ....................................<br>ผู้จัดทำรายงาน</div><div>ลงชื่อ ....................................<br>ผู้อำนวยการ'+esc(ORG.dept)+'</div></div>';
 
@@ -128,9 +137,9 @@ function drawCharts(c, D){
   charts.status = new Chart(document.getElementById('ch_status'), { type:'doughnut', data:{labels:st, datasets:[{data:st.map(function(s){return c.by_status[s];}), backgroundColor:st.map(function(s){return CLS[s][2];})}]}, options:{plugins:{legend:{position:'right'}}} });
   var moos=Object.keys(c.by_moo).sort(function(a,b){return a-b;});
   charts.moo = new Chart(document.getElementById('ch_moo'), { type:'bar', data:{labels:moos.map(function(m){return 'หมู่ '+m;}), datasets:[
-      {label:'เสร็จ', data:moos.map(function(m){return c.by_moo[m].done;}), backgroundColor:'#2e7d32'},
-      {label:'ค้าง', data:moos.map(function(m){return c.by_moo[m].open;}), backgroundColor:'#c62828'},
-      {label:'แจ้งเท็จ', data:moos.map(function(m){return c.by_moo[m].fake;}), backgroundColor:'#9e9e9e'}]},
+      {label:'เสร็จ', data:moos.map(function(m){return c.by_moo[m].done;}), backgroundColor:'#067647'},
+      {label:'ค้าง', data:moos.map(function(m){return c.by_moo[m].open;}), backgroundColor:'#b42318'},
+      {label:'แจ้งเท็จ', data:moos.map(function(m){return c.by_moo[m].fake;}), backgroundColor:'#475467'}]},
     options:{scales:{x:{stacked:true}, y:{stacked:true, beginAtZero:true, ticks:{precision:0}}}} });
 }
 function exportCsv(){
@@ -145,11 +154,11 @@ function exportCsv(){
 async function loadPoles(){
   var el=document.getElementById('tab_poles');
   el.innerHTML='<div class="p-3 grid md:grid-cols-2 gap-3">'+
-    '<div class="'+T.card+'"><h3 class="font-bold m-0 mb-2">นำเข้า/อัปเดตข้อมูลเสา</h3><p class="text-sm text-stone-600">วางข้อมูลจาก Excel/Google Sheet (คัดลอกมาทั้งคอลัมน์) หรือ CSV — คอลัมน์: <code>pole_id, zone, address, lat, lng, note</code> · เลขเสาต้องเป็น <b>หมู่/ต้นที่</b> เช่น 1/14 · ถ้ามีเลขเสาเดิมอยู่แล้วจะอัปเดตทับ</p>'+
+    '<div class="'+T.card+'"><h3 class="font-bold m-0 mb-2">นำเข้า/อัปเดตข้อมูลเสา</h3><p class="text-sm text-muted">วางข้อมูลจาก Excel/Google Sheet (คัดลอกมาทั้งคอลัมน์) หรือ CSV — คอลัมน์: <code>pole_id, zone, address, lat, lng, note</code> · เลขเสาต้องเป็น <b>หมู่/ต้นที่</b> เช่น 1/14 · ถ้ามีเลขเสาเดิมอยู่แล้วจะอัปเดตทับ</p>'+
     '<textarea id="pl_csv" class="'+T.input+' min-h-[180px] font-mono text-xs" placeholder="pole_id,zone,address,lat,lng,note\n1/1,1,หน้าวัด,18.582125,98.952782,\n1/2,1,ปากซอย,18.5825,98.9530,"></textarea>'+
-    '<div class="flex gap-2 mt-2"><button class="'+T.btnSm+' bg-brand text-white px-4" onclick="importPoles()">📥 นำเข้า</button><span class="text-sm text-stone-500 self-center" id="pl_msg"></span></div></div>'+
-    '<div class="'+T.card+' overflow-auto max-h-[70vh]"><div class="flex justify-between items-center mb-2"><h3 class="font-bold m-0">เสาในระบบ <span id="pl_count" class="text-stone-500 font-normal text-sm"></span></h3><input id="pl_q" class="'+T.input+' w-auto py-1.5 text-sm" placeholder="ค้นหา" oninput="renderPoles()"></div><div id="pl_list"></div></div></div>';
-  try { window.POLES = await api('/api/poles'); renderPoles(); } catch(e){ document.getElementById('pl_list').innerHTML='<p class="text-red-700">'+esc(e.message)+'</p>'; }
+    '<div class="flex gap-2 mt-2"><button class="'+T.btnSm+' bg-brand text-white px-4" onclick="importPoles()">'+ico('down')+'นำเข้า</button><span class="text-sm text-muted self-center" id="pl_msg"></span></div></div>'+
+    '<div class="'+T.card+' overflow-auto max-h-[70vh]"><div class="flex justify-between items-center mb-2"><h3 class="font-bold m-0">เสาในระบบ <span id="pl_count" class="text-muted font-normal text-sm"></span></h3><input id="pl_q" class="'+T.input+' w-auto py-1.5 text-sm" placeholder="ค้นหา" oninput="renderPoles()"></div><div id="pl_list"></div></div></div>';
+  try { window.POLES = await api('/api/poles'); renderPoles(); } catch(e){ document.getElementById('pl_list').innerHTML='<p class="text-[var(--new)]">'+esc(e.message)+'</p>'; }
 }
 function renderPoles(){
   var q=(document.getElementById('pl_q').value||'').toLowerCase();
@@ -157,7 +166,7 @@ function renderPoles(){
   var noGeo=(POLES||[]).filter(function(p){return !p.lat||!p.lng;}).length;
   document.getElementById('pl_count').textContent='('+(POLES||[]).length+' ต้น'+(noGeo?' · ไม่มีพิกัด '+noGeo:'')+')';
   document.getElementById('pl_list').innerHTML='<div class="tbl-wrap"><table class="w-full text-sm"><thead><tr><th class="'+TH+'">เสา</th><th class="'+TH+'">หมู่</th><th class="'+TH+'">จุดสังเกต</th><th class="'+TH+'">พิกัด</th></tr></thead><tbody>'+
-    rows.slice(0,500).map(function(p){ return '<tr><td class="'+TD+' font-bold">'+esc(p.pole_id)+'</td><td class="'+TD+'">'+esc(p.zone)+'</td><td class="'+TD+'">'+esc(p.address)+'</td><td class="'+TD+'">'+(p.lat&&p.lng?'<a class="text-blue-700" target="_blank" rel="noopener" href="'+gmaps(p.lat,p.lng)+'">🧭 '+p.lat+', '+p.lng+'</a>':'<span class="text-red-700">ไม่มีพิกัด</span>')+'</td></tr>'; }).join('')+'</tbody></table></div>'+(rows.length>500?'<p class="text-xs text-stone-500">แสดง 500 แรก ใช้ช่องค้นหาเพื่อกรอง</p>':'');
+    rows.slice(0,500).map(function(p){ return '<tr><td class="'+TD+' font-bold">'+esc(p.pole_id)+'</td><td class="'+TD+'">'+esc(p.zone)+'</td><td class="'+TD+'">'+esc(p.address)+'</td><td class="'+TD+'">'+(p.lat&&p.lng?'<a class="text-brand underline inline-flex items-center gap-1" target="_blank" rel="noopener" href="'+gmaps(p.lat,p.lng)+'">'+ico('nav')+p.lat+', '+p.lng+'</a>':'<span class="text-[var(--new)] font-semibold">ไม่มีพิกัด</span>')+'</td></tr>'; }).join('')+'</tbody></table></div>'+(rows.length>500?'<p class="text-xs text-muted">แสดง 500 แรก ใช้ช่องค้นหาเพื่อกรอง</p>':'');
 }
 async function importPoles(){
   var txt=document.getElementById('pl_csv').value.trim(), msg=document.getElementById('pl_msg');
@@ -175,10 +184,10 @@ async function importPoles(){
 async function loadBlock(){
   var el=document.getElementById('tab_block');
   var list=[]; try { list=await api('/api/block'); } catch(e){}
-  el.innerHTML='<div class="p-3 max-w-3xl"><div class="'+T.card+'"><h3 class="font-bold m-0 mb-2">บัญชีดำเบอร์โทร ('+list.length+')</h3><p class="text-sm text-stone-600">เบอร์ในรายการนี้จะแจ้งซ่อมไม่ได้ ระบบจะแสดงข้อความให้โทรติดต่อ อบต. แทน</p>'+
-    '<div class="flex flex-wrap gap-2 my-3"><input id="bl_p" class="'+T.input+' w-auto flex-1 min-w-[140px] py-2 text-sm" placeholder="เบอร์โทร" inputmode="tel"><input id="bl_r" class="'+T.input+' w-auto flex-1 min-w-[160px] py-2 text-sm" placeholder="เหตุผล" value="แจ้งเท็จซ้ำ"><button class="'+T.btnSm+' bg-red-700 text-white" onclick="blockPhone(document.getElementById(\'bl_p\').value,document.getElementById(\'bl_r\').value)">บล็อก</button></div>'+
+  el.innerHTML='<div class="p-3 max-w-3xl"><div class="'+T.card+'"><h3 class="font-bold m-0 mb-2">บัญชีดำเบอร์โทร ('+list.length+')</h3><p class="text-sm text-muted">เบอร์ในรายการนี้จะแจ้งซ่อมไม่ได้ ระบบจะแสดงข้อความให้โทรติดต่อ อบต. แทน</p>'+
+    '<div class="flex flex-wrap gap-2 my-3"><input id="bl_p" class="'+T.input+' w-auto flex-1 min-w-[140px] py-2 text-sm" placeholder="เบอร์โทร" inputmode="tel"><input id="bl_r" class="'+T.input+' w-auto flex-1 min-w-[160px] py-2 text-sm" placeholder="เหตุผล" value="แจ้งเท็จซ้ำ"><button class="'+T.btnSm+' bg-[var(--new)] text-white" onclick="blockPhone(document.getElementById(\'bl_p\').value,document.getElementById(\'bl_r\').value)">บล็อก</button></div>'+
     '<div class="tbl-wrap"><table class="w-full text-sm"><thead><tr><th class="'+TH+'">เบอร์</th><th class="'+TH+'">เหตุผล</th><th class="'+TH+'">วันที่</th><th class="'+TH+'"></th></tr></thead><tbody>'+
-    list.map(function(b){ return '<tr><td class="'+TD+' font-mono">'+esc(b.phone)+'</td><td class="'+TD+'">'+esc(b.reason)+'</td><td class="'+TD+'">'+fmtDT(b.blocked_at)+'</td><td class="'+TD+' text-right"><button class="text-blue-700 underline text-sm" onclick="unblock(\''+esc(b.phone)+'\')">ปลดบล็อก</button></td></tr>'; }).join('')||'<tr><td class="'+TD+' text-stone-500" colspan="4">ยังไม่มีเบอร์ในบัญชีดำ</td></tr>'+
+    list.map(function(b){ return '<tr><td class="'+TD+' font-mono">'+esc(b.phone)+'</td><td class="'+TD+'">'+esc(b.reason)+'</td><td class="'+TD+'">'+fmtDT(b.blocked_at)+'</td><td class="'+TD+' text-right"><button class="text-brand underline text-sm" onclick="unblock(\''+esc(b.phone)+'\')">ปลดบล็อก</button></td></tr>'; }).join('')||'<tr><td class="'+TD+' text-muted" colspan="4">ยังไม่มีเบอร์ในบัญชีดำ</td></tr>'+
     '</tbody></table></div></div></div>';
 }
 async function blockPhone(phone, reason){
@@ -196,11 +205,11 @@ async function loadUsers(){
     '<label class="block font-bold mt-2 mb-1 text-sm">ชื่อผู้ใช้ (a-z 0-9)</label><input id="us_u" class="'+T.input+'" placeholder="เช่น somchai" autocapitalize="off">'+
     '<label class="block font-bold mt-2 mb-1 text-sm">ชื่อที่แสดง</label><input id="us_n" class="'+T.input+'" placeholder="เช่น นายสมชาย ช่างไฟ">'+
     '<label class="block font-bold mt-2 mb-1 text-sm">สิทธิ์</label><select id="us_r" class="'+T.input+'"><option value="tech">ช่าง (ดู/อัปเดตงาน)</option><option value="admin">แอดมิน (ทุกอย่าง + รายงาน + ผู้ใช้)</option></select>'+
-    '<label class="block font-bold mt-2 mb-1 text-sm">รหัสผ่าน <span class="text-stone-400 font-normal">(เว้นว่างถ้าไม่เปลี่ยน)</span></label><input id="us_p" class="'+T.input+'" type="text" placeholder="อย่างน้อย 6 ตัว">'+
+    '<label class="block font-bold mt-2 mb-1 text-sm">รหัสผ่าน <span class="text-muted font-normal">(เว้นว่างถ้าไม่เปลี่ยน)</span></label><input id="us_p" class="'+T.input+'" type="text" placeholder="อย่างน้อย 6 ตัว">'+
     '<label class="flex items-center gap-2 mt-3 text-sm"><input type="checkbox" id="us_a" checked class="size-4 accent-brand"> เปิดใช้งาน</label>'+
-    '<button class="'+T.btn+' w-full mt-3" onclick="saveUser()">💾 บันทึกบัญชี</button><p class="text-xs text-stone-500 mt-2">บัญชี <b>admin</b> หลักใช้รหัสจาก ADMIN_TOKEN ใน Vercel — ใช้ตั้งต้นและกู้คืนระบบ ไม่แสดงในรายการนี้</p></div>'+
+    '<button class="'+T.btn+' w-full mt-3" onclick="saveUser()">'+ico('save')+'บันทึกบัญชี</button><p class="text-xs text-muted mt-2">บัญชี <b>admin</b> หลักใช้รหัสจาก ADMIN_TOKEN ใน Vercel — ใช้ตั้งต้นและกู้คืนระบบ ไม่แสดงในรายการนี้</p></div>'+
     '<div class="'+T.card+'"><h3 class="font-bold m-0 mb-2">บัญชีทั้งหมด ('+list.length+')</h3><div class="tbl-wrap"><table class="w-full text-sm"><thead><tr><th class="'+TH+'">ผู้ใช้</th><th class="'+TH+'">ชื่อ</th><th class="'+TH+'">สิทธิ์</th><th class="'+TH+'">เข้าใช้ล่าสุด</th><th class="'+TH+'"></th></tr></thead><tbody>'+
-    list.map(function(u){ return '<tr class="'+(u.active?'':'opacity-50')+'"><td class="'+TD+' font-mono">'+esc(u.username)+'</td><td class="'+TD+'">'+esc(u.display_name)+(u.active?'':' <span class="text-xs text-red-700">(ปิด)</span>')+'</td><td class="'+TD+'">'+(u.role==='admin'?'แอดมิน':'ช่าง')+'</td><td class="'+TD+' text-xs">'+(u.last_login?fmtDT(u.last_login):'-')+'</td><td class="'+TD+' text-right whitespace-nowrap"><button class="text-blue-700 underline text-sm mr-2" onclick=\'editUser('+JSON.stringify(u)+')\'>แก้</button><button class="text-red-700 underline text-sm" onclick="delUser(\''+esc(u.username)+'\')">ลบ</button></td></tr>'; }).join('')||'<tr><td class="'+TD+' text-stone-500" colspan="5">ยังไม่มีบัญชี — สร้างบัญชีช่างคนแรกทางซ้าย</td></tr>'+
+    list.map(function(u){ return '<tr class="'+(u.active?'':'opacity-50')+'"><td class="'+TD+' font-mono">'+esc(u.username)+'</td><td class="'+TD+'">'+esc(u.display_name)+(u.active?'':' <span class="text-xs text-[var(--new)]">(ปิด)</span>')+'</td><td class="'+TD+'">'+(u.role==='admin'?'แอดมิน':'ช่าง')+'</td><td class="'+TD+' text-xs">'+(u.last_login?fmtDT(u.last_login):'-')+'</td><td class="'+TD+' text-right whitespace-nowrap"><button class="text-brand underline text-sm mr-2" onclick=\'editUser('+JSON.stringify(u)+')\'>แก้</button><button class="text-[var(--new)] underline text-sm" onclick="delUser(\''+esc(u.username)+'\')">ลบ</button></td></tr>'; }).join('')||'<tr><td class="'+TD+' text-muted" colspan="5">ยังไม่มีบัญชี — สร้างบัญชีช่างคนแรกทางซ้าย</td></tr>'+
     '</tbody></table></div></div></div>';
 }
 function editUser(u){ document.getElementById('us_u').value=u.username; document.getElementById('us_n').value=u.display_name; document.getElementById('us_r').value=u.role; document.getElementById('us_a').checked=u.active; document.getElementById('us_p').value=''; document.getElementById('us_u').focus(); }
