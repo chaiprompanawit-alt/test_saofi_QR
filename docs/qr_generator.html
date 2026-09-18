@@ -7,54 +7,133 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
   body{font-family:"Sarabun",sans-serif;background:#f4f2ee;margin:0;padding:16px;color:#2b2620}
-  .wrap{max-width:900px;margin:0 auto}
+  .wrap{max-width:1000px;margin:0 auto}
   h1{font-size:20px}
   .box{background:#fff;border:1px solid #e2ddd5;border-radius:12px;padding:16px;margin-bottom:16px}
-  label{font-weight:700;display:block;margin:8px 0 4px}
-  input,textarea{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-family:inherit;font-size:14px;box-sizing:border-box}
-  textarea{min-height:120px}
-  button{background:#7a5c3e;color:#fff;border:0;padding:12px 20px;border-radius:10px;font-size:15px;cursor:pointer;margin-top:12px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}
-  .qc{border:1px solid #e2ddd5;border-radius:10px;padding:12px;text-align:center;background:#fff}
-  .qc .num{font-size:22px;font-weight:800;color:#7a5c3e}
-  .qc canvas,.qc img{margin:6px auto}
+  label{font-weight:700;display:block;margin:10px 0 4px}
+  input,textarea,select{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-family:inherit;font-size:14px;box-sizing:border-box}
+  textarea{min-height:110px;font-family:monospace}
+  button{background:#7a5c3e;color:#fff;border:0;padding:12px 20px;border-radius:10px;font-size:15px;cursor:pointer;margin:12px 6px 0 0}
+  .row{display:flex;gap:12px;flex-wrap:wrap}.row>div{flex:1 1 220px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+  .qc{border:1px solid #e2ddd5;border-radius:10px;padding:10px;text-align:center;background:#fff;page-break-inside:avoid}
+  .qc .num{font-size:24px;font-weight:800;color:#7a5c3e;line-height:1.1}
+  .qc .moo{font-size:12px;color:#6b5f4e}
+  .qc canvas,.qc img{margin:6px auto;display:block}
   .muted{color:#8a7f6e;font-size:13px}
-  @media print{ button,.box.noprint{display:none} body{background:#fff} }
+  h2.sec{page-break-before:always;font-size:18px;border-bottom:2px solid #7a5c3e;padding-bottom:4px;margin-top:24px}
+  h2.sec:first-of-type{page-break-before:auto}
+  @media print{ .noprint{display:none} body{background:#fff;padding:0} .grid{grid-template-columns:repeat(4,1fr)} }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>🏷️ สร้าง QR Code รายเสา (แต่ละต้นมี QR ของตัวเอง)</h1>
+  <h1>🏷️ สร้าง QR Code รายเสา — 14 หมู่ / 1,300 ต้น</h1>
+
   <div class="box noprint">
-    <label>Web App URL (จาก Apps Script &gt; Deploy)</label>
+    <label>1) Web App URL (จาก Apps Script &gt; Deploy, ลงท้าย /exec)</label>
     <input id="base" placeholder="https://script.google.com/macros/s/AKfycb..../exec">
-    <p class="muted">ระบบจะสร้างลิงก์: <code>URL?pole=เลขเสา</code> ให้อัตโนมัติ เมื่อสแกนแล้วหน้าเว็บจะรู้ทันทีว่าเป็นเสาต้นไหน</p>
-    <label>รายการเลขเสา (พิมพ์ทีละบรรทัด หรือวางจากคอลัมน์ pole_id)</label>
-    <textarea id="poles">1-53
-1-54
-4-100
-4-123
-9-9</textarea>
-    <button onclick="gen()">สร้าง QR ทั้งหมด</button>
+
+    <label>2) QR_SECRET (ถ้าตั้งไว้ใน Script Properties — ปล่อยว่างถ้าไม่ใช้ลายเซ็น)</label>
+    <input id="secret" type="password" placeholder="รหัสลับเดียวกับใน Apps Script">
+    <p class="muted">เมื่อใส่ ระบบจะเติม <code>&amp;k=xxxxxx</code> ในแต่ละลิงก์ → คนพิมพ์ URL มั่วเสาอื่นจะถูกปฏิเสธ ต้องสแกนจากสติกเกอร์จริงเท่านั้น</p>
+
+    <label>3) เลือกวิธีระบุเสา</label>
+    <div class="row">
+      <div>
+        <label class="muted">ก. จำนวนต้นต่อหมู่ (หมู่:จำนวน ทีละบรรทัด)</label>
+        <textarea id="byMoo">1:95
+2:110
+3:80
+4:120
+5:90
+6:75
+7:100
+8:85
+9:95
+10:70
+11:105
+12:90
+13:95
+14:90</textarea>
+        <p class="muted">จะสร้าง 1/1 … 1/95, 2/1 … 2/110 ฯลฯ</p>
+      </div>
+      <div>
+        <label class="muted">ข. หรือวางรายการเลขเสาเอง (คอลัมน์ pole_id จากชีต Poles)</label>
+        <textarea id="poles" placeholder="1/14
+1/15
+4/100"></textarea>
+        <p class="muted">ถ้ากรอกช่องนี้ จะใช้ช่องนี้แทนช่อง ก.</p>
+      </div>
+    </div>
+
+    <label>4) พิมพ์เฉพาะหมู่ (ว่าง = ทุกหมู่)</label>
+    <input id="onlyMoo" placeholder="เช่น 3" inputmode="numeric" style="max-width:160px">
+
+    <button onclick="gen()">สร้าง QR</button>
     <button onclick="window.print()" style="background:#5b7a3e">🖨️ พิมพ์ / บันทึก PDF</button>
+    <button onclick="exportCsv()" style="background:#607d8b">⬇️ ดาวน์โหลด CSV ลิงก์ทั้งหมด</button>
+    <p class="muted" id="summary"></p>
   </div>
-  <div class="grid" id="out"></div>
+
+  <div id="out"></div>
 </div>
+
 <script>
-function gen(){
+var LAST = [];
+
+async function sig(secret, pole){
+  if(!secret) return '';
+  var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(secret+'|'+pole));
+  return Array.from(new Uint8Array(buf).slice(0,3)).map(function(b){return ('0'+b.toString(16)).slice(-2);}).join('');
+}
+
+function poleList(){
+  var manual = document.getElementById('poles').value.split('\n').map(function(s){return s.trim();}).filter(Boolean);
+  if(manual.length) return manual;
+  var list=[];
+  document.getElementById('byMoo').value.split('\n').forEach(function(line){
+    var m=line.trim().match(/^(\d{1,2})\s*[:：]\s*(\d{1,4})$/); if(!m) return;
+    for(var i=1;i<=+m[2];i++) list.push(m[1]+'/'+i);
+  });
+  return list;
+}
+
+async function gen(){
   var base=document.getElementById('base').value.trim();
   if(!base){ alert('กรุณาวาง Web App URL ก่อน'); return; }
-  var list=document.getElementById('poles').value.split('\n').map(function(s){return s.trim();}).filter(Boolean);
-  var out=document.getElementById('out'); out.innerHTML='';
-  list.forEach(function(p){
-    var url=base+(base.indexOf('?')>=0?'&':'?')+'pole='+encodeURIComponent(p);
-    var card=document.createElement('div'); card.className='qc';
-    var num=document.createElement('div'); num.className='num'; num.textContent=p; card.appendChild(num);
-    var q=document.createElement('div'); card.appendChild(q);
-    new QRCode(q,{text:url,width:150,height:150,correctLevel:QRCode.CorrectLevel.M});
-    var cap=document.createElement('div'); cap.className='muted'; cap.textContent='แจ้งซ่อมไฟฟ้า ทต.ป่าสัก'; card.appendChild(cap);
-    out.appendChild(card);
+  var secret=document.getElementById('secret').value;
+  var only=document.getElementById('onlyMoo').value.trim();
+  var list=poleList().filter(function(p){ return !only || p.split('/')[0]===only; });
+  if(!list.length){ alert('ไม่มีรายการเสา'); return; }
+
+  var out=document.getElementById('out'); out.innerHTML=''; LAST=[];
+  var groups={};
+  for(var i=0;i<list.length;i++){
+    var p=list[i], k=await sig(secret,p);
+    var url=base+(base.indexOf('?')>=0?'&':'?')+'pole='+encodeURIComponent(p)+(k?'&k='+k:'');
+    LAST.push({pole:p,url:url});
+    var moo=p.split('/')[0]; (groups[moo]=groups[moo]||[]).push({p:p,url:url});
+  }
+  Object.keys(groups).sort(function(a,b){return a-b;}).forEach(function(moo){
+    var h=document.createElement('h2'); h.className='sec'; h.textContent='หมู่ '+moo+' ('+groups[moo].length+' ต้น)'; out.appendChild(h);
+    var g=document.createElement('div'); g.className='grid'; out.appendChild(g);
+    groups[moo].forEach(function(it){
+      var card=document.createElement('div'); card.className='qc';
+      card.innerHTML='<div class="num">'+it.p+'</div><div class="moo">หมู่ '+moo+' ต้นที่ '+it.p.split('/')[1]+'</div>';
+      var q=document.createElement('div'); card.appendChild(q);
+      new QRCode(q,{text:it.url,width:130,height:130,correctLevel:QRCode.CorrectLevel.M});
+      var cap=document.createElement('div'); cap.className='muted'; cap.textContent='แจ้งซ่อมไฟฟ้า ทต.ป่าสัก'; card.appendChild(cap);
+      g.appendChild(card);
+    });
   });
+  document.getElementById('summary').textContent='สร้างแล้ว '+list.length+' ต้น ใน '+Object.keys(groups).length+' หมู่'+(secret?' · มีลายเซ็น k':' · ไม่มีลายเซ็น');
+}
+
+function exportCsv(){
+  if(!LAST.length){ alert('กดสร้าง QR ก่อน'); return; }
+  var csv='pole_id,url\n'+LAST.map(function(r){return r.pole+','+r.url;}).join('\n');
+  var a=document.createElement('a'); a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent(csv); a.download='qr_links.csv'; a.click();
 }
 </script>
 </body>

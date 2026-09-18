@@ -51,6 +51,9 @@
   <div class="filters">
     <label class="muted">สถานะ:</label>
     <select id="filter" onchange="render()"><option value="">ทั้งหมด</option></select>
+    <label class="muted">หมู่:</label>
+    <select id="moo" onchange="render()"><option value="">ทุกหมู่</option></select>
+    <input id="q" placeholder="ค้นเลขเสา/ชื่อ/เบอร์" oninput="render()" style="min-width:160px">
     <button class="save" onclick="load()">🔄 รีเฟรช</button>
     <span class="muted" id="count"></span>
   </div>
@@ -65,7 +68,7 @@
     var STATUS = [], DATA = [], map, markers;
     var cls = { 'แจ้งใหม่':['s-new','p-new','#c62828'], 'รับเรื่องแล้ว':['s-recv','p-recv','#ef6c00'],
       'กำลังดำเนินการ':['s-prog','p-prog','#1565c0'], 'เสร็จสิ้น':['s-done','p-done','#2e7d32'],
-      'ปิดงาน/ไม่พบปัญหา':['s-close','p-close','#607d8b'] };
+      'ปิดงาน/ไม่พบปัญหา':['s-close','p-close','#607d8b'], 'แจ้งเท็จ':['s-close','p-close','#424242'] };
 
     function initMap(){
       map = L.map('map').setView([18.55, 99.02], 13); // ศูนย์กลางประมาณ ต.ป่าสัก
@@ -76,15 +79,30 @@
 
     function load(){
       google.script.run.withSuccessHandler(function(list){
-        DATA = list; render();
+        DATA = list;
+        // เติมตัวเลือกหมู่จากข้อมูลจริง (1-14)
+        var sel=document.getElementById('moo'), cur=sel.value, moos={};
+        DATA.forEach(function(r){ var m=mooOf(r.pole_id); if(m) moos[m]=1; });
+        sel.innerHTML='<option value="">ทุกหมู่</option>'+Object.keys(moos).sort(function(a,b){return a-b;})
+          .map(function(m){ return '<option value="'+m+'"'+(m===cur?' selected':'')+'>หมู่ '+m+'</option>'; }).join('');
+        render();
       }).withFailureHandler(function(e){ alert('โหลดข้อมูลไม่สำเร็จ: '+e.message); }).getReports(TOKEN);
     }
 
     function esc(s){ return String(s==null?'':s).replace(/[<>&]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;'}[c];}); }
 
+    function mooOf(id){ var m=String(id||'').split('/'); return m.length>1 ? m[0] : ''; }
+
     function render(){
       var f = document.getElementById('filter').value;
-      var rows = DATA.filter(function(r){ return !f || r.status===f; });
+      var moo = document.getElementById('moo').value;
+      var q = document.getElementById('q').value.trim().toLowerCase();
+      var rows = DATA.filter(function(r){
+        if(f && r.status!==f) return false;
+        if(moo && mooOf(r.pole_id)!==moo) return false;
+        if(q && (String(r.pole_id)+' '+r.reporter_name+' '+r.reporter_phone+' '+r.detail).toLowerCase().indexOf(q)<0) return false;
+        return true;
+      });
       document.getElementById('count').textContent = 'แสดง '+rows.length+' รายการ';
 
       // สถิติ
@@ -115,7 +133,8 @@
           '<h3>เสา '+esc(r.pole_id)+' <span class="pill '+c[1]+'">'+esc(r.status)+'</span></h3>'+
           '<div class="meta">📅 '+esc(r.timestamp)+' · เลขที่ '+esc(r.report_id)+'<br>'+
           '🔧 '+esc(r.detail)+'<br>'+
-          '👤 '+esc(r.reporter_name)+' · 📞 <a href="tel:'+esc(r.reporter_phone)+'">'+esc(r.reporter_phone)+'</a><br>'+
+          '👤 '+esc(r.reporter_name)+' · 📞 <a href="tel:'+esc(r.reporter_phone)+'">'+esc(r.reporter_phone)+'</a>'+
+          (r.fake_count>0 ? ' <span class="pill p-close" title="เบอร์นี้เคยถูกตีเป็นแจ้งเท็จ">⚠ แจ้งเท็จ '+r.fake_count+' ครั้ง</span> <a href="#" onclick="block(\''+esc(r.reporter_phone)+'\');return false" style="color:#c62828">บล็อกเบอร์</a>' : '')+'<br>'+
           nav+'</div>'+
           '<div class="row">'+
             '<select id="st_'+r._row+'">'+opts+'</select>'+
@@ -136,6 +155,14 @@
       google.script.run.withSuccessHandler(function(){ load(); })
         .withFailureHandler(function(e){ alert('บันทึกไม่สำเร็จ: '+e.message); })
         .updateReport(TOKEN, row, st, as, nt);
+    }
+
+    function block(phone){
+      var reason = prompt('บล็อกเบอร์ '+phone+' — ระบุเหตุผล:', 'แจ้งเท็จซ้ำ');
+      if(reason===null) return;
+      google.script.run.withSuccessHandler(function(){ alert('บล็อกแล้ว เบอร์นี้จะแจ้งไม่ได้อีก (ปลดบล็อกได้ในชีต Blocklist)'); })
+        .withFailureHandler(function(e){ alert('ไม่สำเร็จ: '+e.message); })
+        .blockPhone(TOKEN, phone, reason);
     }
 
     initMap();

@@ -39,14 +39,30 @@
     <p>เทศบาลตำบลป่าสัก อ.เมืองลำพูน จ.ลำพูน</p>
   </div>
 
+  <? if (!qrOk) { ?>
+  <div class="card done">
+    <div class="check">🚫</div>
+    <h2 style="color:#a12">ลิงก์ไม่ถูกต้อง</h2>
+    <p>กรุณาสแกน QR Code จากสติกเกอร์บนเสาไฟอีกครั้ง<br>หรือโทร 053-537-478</p>
+  </div>
+  <? } else if (openReport) { ?>
+  <div class="card done">
+    <div class="check">🔔</div>
+    <h2 style="color:#ef6c00">เสา <?= poleId ?> มีคนแจ้งไว้แล้ว</h2>
+    <p>เลขที่แจ้ง <span class="rid"><?= openReport.report_id ?></span><br>
+       สถานะ: <b><?= openReport.status ?></b> · แจ้งเมื่อ <?= openReport.timestamp ?></p>
+    <p class="hint">กองช่างกำลังดำเนินการ ไม่ต้องแจ้งซ้ำครับ<br>หากอาการเปลี่ยน/เร่งด่วน โทร 053-537-478</p>
+  </div>
+  <? } else { ?>
   <div id="formArea">
     <div class="card">
+      <? var parts = String(poleId).split('/'); var moo = parts[0], ton = parts[1]; ?>
       <? if (pole) { ?>
         <div class="pole-badge">
           <div class="num"><?= pole.pole_id ?></div>
           <div class="meta">
             <div><b>เสาที่คุณสแกน</b></div>
-            <? if (pole.zone) { ?><div>โซน/หมู่: <?= pole.zone ?></div><? } ?>
+            <? if (ton) { ?><div>หมู่ <?= moo ?> ต้นที่ <?= ton ?></div><? } ?>
             <? if (pole.address) { ?><div><?= pole.address ?></div><? } ?>
             <div>✓ ระบบระบุตำแหน่งให้อัตโนมัติแล้ว</div>
           </div>
@@ -54,12 +70,12 @@
       <? } else if (poleId) { ?>
         <div class="pole-badge">
           <div class="num"><?= poleId ?></div>
-          <div class="meta"><b>เลขเสา <?= poleId ?></b><br>(ยังไม่มีพิกัดในระบบ ช่างจะตรวจสอบ)</div>
+          <div class="meta"><b><? if (ton) { ?>หมู่ <?= moo ?> ต้นที่ <?= ton ?><? } else { ?>เลขเสา <?= poleId ?><? } ?></b><br>(ยังไม่มีพิกัดในระบบ ช่างจะตรวจสอบ)</div>
         </div>
       <? } else { ?>
         <div class="warn">⚠️ ไม่พบเลขเสาจาก QR — กรุณากรอกเลขเสาด้านล่าง (ดูที่สติกเกอร์บนเสา)</div>
-        <label>เลขโคมไฟฟ้า/เลขเสา <span class="req">*</span></label>
-        <input id="manualPole" placeholder="เช่น 1-53" inputmode="text">
+        <label>เลขเสา (หมู่/ต้นที่) <span class="req">*</span></label>
+        <input id="manualPole" placeholder="เช่น 1/14 = หมู่ 1 ต้นที่ 14" inputmode="text">
       <? } ?>
 
       <label>ชื่อผู้แจ้ง <span class="req">*</span></label>
@@ -71,6 +87,11 @@
       <label>รายละเอียดความชำรุด <span class="req">*</span></label>
       <textarea id="detail" placeholder="เช่น ไฟดับทั้งต้น / ไฟกะพริบ / โคมแตก"></textarea>
 
+      <!-- honeypot: คนมองไม่เห็น บอทจะกรอก -->
+      <div style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true">
+        <label>Website</label><input id="website" tabindex="-1" autocomplete="off">
+      </div>
+
       <? if (!pole) { ?>
       <div class="gps-row">
         <button type="button" onclick="getGPS()">📍 แนบตำแหน่งปัจจุบัน</button>
@@ -79,20 +100,24 @@
       <? } ?>
 
       <button id="btn" onclick="submitForm()">ส่งเรื่องแจ้งซ่อม</button>
+      <p class="hint" style="margin-top:10px">🔒 ชื่อและเบอร์โทรใช้เพื่อติดต่อกลับเรื่องการซ่อมเท่านั้น เก็บรักษาโดยกองช่างเทศบาลตำบลป่าสัก ตาม พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล (PDPA)</p>
     </div>
     <p class="hint" style="text-align:center">ดำเนินการในวันเวลาราชการ · ไม่เกิน 10 วันทำการ · โทร 053-537-478</p>
   </div>
 
   <div id="doneArea" class="card done" style="display:none">
-    <div class="check">✅</div>
-    <h2>รับเรื่องแล้ว</h2>
+    <div class="check" id="doneIcon">✅</div>
+    <h2 id="doneTitle">รับเรื่องแล้ว</h2>
     <p>เลขที่แจ้ง: <span class="rid" id="ridOut"></span></p>
-    <p>เจ้าหน้าที่กองช่างจะดำเนินการโดยเร็ว<br>ขอบคุณที่ช่วยดูแลชุมชนครับ</p>
+    <p id="doneMsg">เจ้าหน้าที่กองช่างจะดำเนินการโดยเร็ว<br>ขอบคุณที่ช่วยดูแลชุมชนครับ</p>
   </div>
+  <? } ?>
 </div>
 
 <script>
   var POLE_ID_FIXED = "<?= poleId ?>";
+  var QR_K = "<?= k ?>";
+  var OPENED_AT = Date.now();   // จับเวลาตั้งแต่เปิดหน้า กันบอทส่งทันที
   var gps = { lat:'', lng:'' };
 
   function getGPS(){
@@ -124,16 +149,24 @@
       .withSuccessHandler(function(res){
         document.getElementById('formArea').style.display='none';
         document.getElementById('ridOut').textContent = res.report_id;
+        if(res.duplicate){
+          document.getElementById('doneIcon').textContent='🔔';
+          document.getElementById('doneTitle').textContent='เสานี้มีคนแจ้งไว้แล้ว';
+          document.getElementById('doneTitle').style.color='#ef6c00';
+          document.getElementById('doneMsg').innerHTML='สถานะ: <b>'+res.status+'</b><br>กองช่างกำลังดำเนินการ ไม่ต้องแจ้งซ้ำครับ';
+        }
         document.getElementById('doneArea').style.display='block';
         window.scrollTo(0,0);
       })
       .withFailureHandler(function(err){
         btn.disabled=false; btn.textContent='ส่งเรื่องแจ้งซ่อม';
-        alert('ส่งไม่สำเร็จ: '+err.message);
+        alert(err.message.replace(/^Error:\s*/,''));
       })
       .submitReport({
-        pole_id: poleId, reporter_name:name, reporter_phone:phone,
-        detail:detail, gps_lat:gps.lat, gps_lng:gps.lng
+        pole_id: poleId, k: QR_K, reporter_name:name, reporter_phone:phone,
+        detail:detail, gps_lat:gps.lat, gps_lng:gps.lng,
+        website: document.getElementById('website').value,  // honeypot
+        opened_at: OPENED_AT
       });
   }
 </script>
