@@ -1,0 +1,7 @@
+/* ส่วนเล็ก ๆ ที่ Tailwind utility ทำไม่สะดวก: สีสถานะ (ใช้จาก JS), Leaflet, พิมพ์รายงาน */
+:root{ --new:#c62828; --recv:#ef6c00; --prog:#1565c0; --done:#2e7d32; --close:#607d8b; --fake:#424242; }
+.p-new{background:var(--new)}.p-recv{background:var(--recv)}.p-prog{background:var(--prog)}.p-done{background:var(--done)}.p-close{background:var(--close)}.p-fake{background:var(--fake)}
+.s-new{border-left-color:var(--new)}.s-recv{border-left-color:var(--recv)}.s-prog{border-left-color:var(--prog)}.s-done{border-left-color:var(--done)}.s-close{border-left-color:var(--close)}.s-fake{border-left-color:var(--fake)}
+.leaflet-container{font-family:inherit;z-index:1}
+.leaflet-popup-content{margin:10px 12px;line-height:1.5}
+@media print{ .noprint{display:none!important} body{background:#fff!important} .print-break{page-break-inside:avoid} }

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%92%A1%3C/text%3E%3C/svg%3E">
+<title>แอดมิน — แจ้งซ่อมไฟฟ้า</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<style type="text/tailwindcss">
+  @theme { --color-brand: #1e4e9a; --color-brand-dark: #163a73; --color-accent: #f2b632; --color-paper: #f3f6fb; --color-line: #d9e1ee; --font-sans: "Sarabun", "Segoe UI", system-ui, sans-serif; }
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="assets/app.css">
+<script src="assets/config.js"></script>
+</head>
+<body class="bg-paper text-stone-800 font-sans">
+<div id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="assets/common.js"></script>
+<script>
+var TABS = [['board','📋 ภาพรวมงาน'],['report','📊 รายงาน'],['poles','🗼 เสาไฟ'],['block','🚫 บัญชีดำ'],['users','👥 ผู้ใช้']];
+var TH = 'px-3 py-2 text-left font-bold bg-slate-50 border-b border-line', TD = 'px-3 py-2 border-b border-line align-top';
+var charts = {};
+
+function start(){
+  var me = Auth.get();
+  if (me.role !== 'admin') { document.getElementById('root').innerHTML = '<div class="max-w-sm mx-auto mt-14 '+T.card+' text-center"><div class="text-4xl">⛔</div><p class="mt-2">บัญชีนี้เป็นสิทธิ์ช่าง ไม่สามารถเข้าหน้าแอดมินได้</p><a href="/tech" class="'+T.btn+' mt-3">ไปหน้าช่าง</a><br><button class="text-sm text-stone-500 mt-3 underline" onclick="Auth.clear()">ออกจากระบบ</button></div>'; return; }
+  document.getElementById('root').innerHTML =
+    topbarHtml('⚙️ แอดมิน — '+esc(ORG.short), '<a href="/tech" class="bg-white/20 hover:bg-white/30 rounded-lg px-2.5 py-1 text-white no-underline">หน้าช่าง</a>')+
+    '<nav class="noprint flex flex-wrap gap-1 px-3 bg-white border-b border-line" id="tabs">'+TABS.map(function(t){
+      return '<button data-t="'+t[0]+'" onclick="show(\''+t[0]+'\')" class="px-3.5 py-2.5 text-sm font-semibold text-stone-500 border-b-[3px] border-transparent cursor-pointer">'+t[1]+'</button>';}).join('')+'</nav>'+
+    '<main class="max-w-7xl mx-auto">'+TABS.map(function(t){ return '<section id="tab_'+t[0]+'" class="hidden"></section>'; }).join('')+'</main>';
+  document.getElementById('tab_board').innerHTML = Board.html();
+  Board.onBlock = blockPhone;
+  Board.initMap(); Board.load().catch(function(e){ alert('โหลดข้อมูลไม่สำเร็จ: '+e.message); });
+  show(location.hash.replace('#','') || 'board');
+}
+function show(t){
+  TABS.forEach(function(x){ document.getElementById('tab_'+x[0]).classList.toggle('hidden', x[0]!==t); });
+  document.querySelectorAll('#tabs button').forEach(function(b){ var on=b.dataset.t===t; b.classList.toggle('text-brand',on); b.classList.toggle('border-brand',on); b.classList.toggle('text-stone-500',!on); });
+  location.hash = t;
+  if (t==='board' && Board.map) setTimeout(function(){ Board.map.invalidateSize(); }, 50);
+  if (t==='report') initReport();
+  if (t==='poles') loadPoles();
+  if (t==='block') loadBlock();
+  if (t==='users') loadUsers();
+}
+
+/* ================= รายงาน รายสัปดาห์ / รายเดือน ================= */
+var RP = { period:'week', date: new Date().toISOString().slice(0,10), data:null, inited:false };
+function initReport(){
+  if (RP.inited) return; RP.inited = true;
+  document.getElementById('tab_report').innerHTML =
+    '<div class="noprint flex flex-wrap items-center gap-2 p-3">'+
+      '<div class="inline-flex rounded-lg border border-line overflow-hidden"><button id="pw" class="px-3 py-1.5 text-sm font-semibold" onclick="setPeriod(\'week\')">รายสัปดาห์</button><button id="pm" class="px-3 py-1.5 text-sm font-semibold" onclick="setPeriod(\'month\')">รายเดือน</button></div>'+
+      '<button class="'+T.btnSm+' border border-line bg-white" onclick="shift(-1)">◀ ก่อนหน้า</button>'+
+      '<input type="date" id="rp_date" class="'+T.input+' w-auto py-1.5 text-sm" value="'+RP.date+'" onchange="RP.date=this.value;loadReport()">'+
+      '<button class="'+T.btnSm+' border border-line bg-white" onclick="shift(1)">ถัดไป ▶</button>'+
+      '<span class="flex-1"></span>'+
+      '<button class="'+T.btnSm+' border border-brand text-brand bg-white" onclick="exportCsv()">⬇ CSV</button>'+
+      '<button class="'+T.btnSm+' bg-brand text-white" onclick="window.print()">🖨️ พิมพ์ / PDF</button></div>'+
+    '<div id="rp_body" class="p-3"></div>';
+  setPeriod('week');
+}
+function setPeriod(p){ RP.period=p; ['pw','pm'].forEach(function(id){ var on=(id==='pw')===(p==='week'); var b=document.getElementById(id); b.className='px-3 py-1.5 text-sm font-semibold '+(on?'bg-brand text-white':'bg-white text-stone-600'); }); loadReport(); }
+function shift(n){ var d=new Date(RP.date); if(RP.period==='month') d.setMonth(d.getMonth()+n); else d.setDate(d.getDate()+7*n); RP.date=d.toISOString().slice(0,10); document.getElementById('rp_date').value=RP.date; loadReport(); }
+function delta(a,b,invert){ if(b==null||a==null) return ''; var d=a-b; if(!d) return '<span class="text-stone-400 text-xs">เท่าเดิม</span>'; var bad = invert ? d<0 : d>0; return '<span class="text-xs '+(bad?'text-red-700':'text-green-700')+'">'+(d>0?'▲ +':'▼ ')+d+' จากช่วงก่อน</span>'; }
+function kpi(v,l,d){ return '<div class="'+T.card+' print-break"><div class="text-3xl font-extrabold text-brand">'+(v==null?'–':v)+'</div><div class="text-sm text-stone-500">'+l+'</div>'+(d||'')+'</div>'; }
+
+async function loadReport(){
+  var body=document.getElementById('rp_body'); body.innerHTML='<p class="text-stone-500">กำลังคำนวณ…</p>';
+  try { RP.data = await api('/api/stats?period='+RP.period+'&date='+RP.date); } catch(e){ body.innerHTML='<p class="text-red-700">'+esc(e.message)+'</p>'; return; }
+  var D=RP.data, c=D.current, p=D.previous;
+  var endShow = new Date(new Date(D.end).getTime()-1);
+  var title = (RP.period==='week'?'รายงานประจำสัปดาห์':'รายงานประจำเดือน')+' — งานซ่อมไฟฟ้าสาธารณะ';
+  var range = fmtD(D.start)+' – '+fmtD(endShow.toISOString());
+
+  var moos = Object.keys(c.by_moo).sort(function(a,b){return a-b;});
+  body.innerHTML =
+    '<div class="text-center mb-3"><h2 class="text-xl font-extrabold text-brand m-0">'+title+'</h2><div class="text-stone-600">'+esc(ORG.name)+' · '+range+'</div><div class="text-xs text-stone-400">จัดทำเมื่อ '+fmtDT(new Date().toISOString())+' · SLA '+D.sla_working_days+' วันทำการ</div></div>'+
+    '<div class="grid grid-cols-2 md:grid-cols-4 gap-3">'+
+      kpi(c.total,'รับแจ้งในช่วงนี้',delta(c.total,p.total))+
+      kpi(c.done,'ซ่อมเสร็จ/ปิดงาน',delta(c.done,p.done,true))+
+      kpi(c.sla_pct==null?'–':c.sla_pct+'%','เสร็จภายใน SLA '+D.sla_working_days+' วันทำการ',delta(c.sla_pct,p.sla_pct,true))+
+      kpi(c.avg_hours_to_done==null?'–':(c.avg_hours_to_done<48? c.avg_hours_to_done+' ชม.' : Math.round(c.avg_hours_to_done/24*10)/10+' วัน'),'เวลาเฉลี่ยจนซ่อมเสร็จ')+
+      kpi(c.open,'ยังค้างจากช่วงนี้')+
+      kpi(D.backlog_total,'งานค้างทั้งระบบ (ณ ปัจจุบัน)')+
+      kpi(c.fake,'แจ้งเท็จ',delta(c.fake,p.fake))+
+      kpi(c.repeat_poles.length,'เสาที่แจ้งซ้ำ >1 ครั้ง')+
+    '</div>'+
+    '<div class="grid md:grid-cols-2 gap-3 mt-3">'+
+      '<div class="'+T.card+' print-break"><h3 class="font-bold m-0 mb-2">จำนวนแจ้งรายวัน</h3><canvas id="ch_daily" height="180"></canvas></div>'+
+      '<div class="'+T.card+' print-break"><h3 class="font-bold m-0 mb-2">สัดส่วนตามสถานะ</h3><canvas id="ch_status" height="180"></canvas></div>'+
+      '<div class="'+T.card+' print-break md:col-span-2"><h3 class="font-bold m-0 mb-2">แยกตามหมู่</h3><canvas id="ch_moo" height="140"></canvas></div>'+
+    '</div>'+
+    '<div class="grid md:grid-cols-2 gap-3 mt-3">'+
+      '<div class="'+T.card+' print-break overflow-auto"><h3 class="font-bold m-0 mb-2">ตารางสรุปตามหมู่</h3><table class="w-full text-sm border-collapse"><thead><tr><th class="'+TH+'">หมู่</th><th class="'+TH+' text-right">แจ้ง</th><th class="'+TH+' text-right">เสร็จ</th><th class="'+TH+' text-right">ค้าง</th><th class="'+TH+' text-right">เท็จ</th></tr></thead><tbody>'+
+        moos.map(function(m){ var x=c.by_moo[m]; return '<tr><td class="'+TD+'">หมู่ '+esc(m)+'</td><td class="'+TD+' text-right">'+x.total+'</td><td class="'+TD+' text-right text-green-700">'+x.done+'</td><td class="'+TD+' text-right text-red-700">'+x.open+'</td><td class="'+TD+' text-right">'+x.fake+'</td></tr>'; }).join('')+
+        '<tr class="font-bold"><td class="'+TD+'">รวม</td><td class="'+TD+' text-right">'+c.total+'</td><td class="'+TD+' text-right">'+c.done+'</td><td class="'+TD+' text-right">'+c.open+'</td><td class="'+TD+' text-right">'+c.fake+'</td></tr></tbody></table></div>'+
+      '<div class="'+T.card+' print-break"><h3 class="font-bold m-0 mb-2">ผลงานช่าง</h3>'+(Object.keys(c.by_staff).length? '<table class="w-full text-sm"><thead><tr><th class="'+TH+'">ผู้รับผิดชอบ</th><th class="'+TH+' text-right">รับงาน</th><th class="'+TH+' text-right">เสร็จ</th></tr></thead><tbody>'+
+        Object.entries(c.by_staff).sort(function(a,b){return b[1].total-a[1].total;}).map(function(e){ return '<tr><td class="'+TD+'">'+esc(e[0])+'</td><td class="'+TD+' text-right">'+e[1].total+'</td><td class="'+TD+' text-right">'+e[1].done+'</td></tr>'; }).join('')+'</tbody></table>' : '<p class="text-stone-500 text-sm">ยังไม่มีการมอบหมายงาน</p>')+
+        '<h3 class="font-bold m-0 mt-4 mb-2">เสาที่แจ้งซ้ำ (ควรตรวจสาเหตุเชิงลึก)</h3>'+(c.repeat_poles.length? '<ul class="text-sm m-0 pl-5">'+c.repeat_poles.map(function(r){ return '<li>เสา <b>'+esc(r.pole_id)+'</b> — '+r.count+' ครั้ง</li>'; }).join('')+'</ul>' : '<p class="text-stone-500 text-sm">ไม่มี</p>')+'</div>'+
+    '</div>'+
+    '<div class="'+T.card+' mt-3 overflow-auto print-break"><h3 class="font-bold m-0 mb-2">รายการงานทั้งหมดในช่วงนี้ ('+D.rows.length+')</h3><table class="w-full text-sm"><thead><tr><th class="'+TH+'">วันที่แจ้ง</th><th class="'+TH+'">เลขที่</th><th class="'+TH+'">เสา</th><th class="'+TH+'">อาการ</th><th class="'+TH+'">สถานะ</th><th class="'+TH+'">ผู้รับผิดชอบ</th><th class="'+TH+'">เสร็จเมื่อ</th><th class="'+TH+'">บันทึกช่าง</th></tr></thead><tbody>'+
+      D.rows.map(function(r){ return '<tr><td class="'+TD+' whitespace-nowrap">'+fmtDT(r.created_at)+'</td><td class="'+TD+' font-mono text-xs">'+esc(r.report_id)+'</td><td class="'+TD+' font-bold">'+esc(r.pole_id)+'</td><td class="'+TD+'">'+esc(r.detail)+'</td><td class="'+TD+'"><span class="'+T.pill+' '+(CLS[r.status]||[])[1]+'">'+esc(r.status)+'</span></td><td class="'+TD+'">'+esc(r.assigned_to)+'</td><td class="'+TD+' whitespace-nowrap">'+fmtDT(r.done_at)+'</td><td class="'+TD+'">'+esc(r.staff_note)+'</td></tr>'; }).join('')+
+      '</tbody></table></div>'+
+    '<div class="mt-8 grid grid-cols-2 gap-8 text-center text-sm hidden print:grid"><div>ลงชื่อ ....................................<br>ผู้จัดทำรายงาน</div><div>ลงชื่อ ....................................<br>ผู้อำนวยการ'+esc(ORG.dept)+'</div></div>';
+
+  drawCharts(c, D);
+}
+function drawCharts(c, D){
+  Object.values(charts).forEach(function(ch){ ch.destroy(); }); charts={};
+  // รายวัน — เติมวันที่ไม่มีข้อมูลเป็น 0 ให้ครบช่วง
+  var labels=[], vals=[], d=new Date(D.start), end=new Date(D.end);
+  while(d<end){ var k=new Date(d.getTime()+7*3600e3).toISOString().slice(0,10); labels.push(k.slice(8,10)+'/'+k.slice(5,7)); vals.push(c.daily[k]||0); d.setDate(d.getDate()+1); }
+  charts.daily = new Chart(document.getElementById('ch_daily'), { type:'bar', data:{labels:labels, datasets:[{label:'จำนวนแจ้ง', data:vals, backgroundColor:'#1e4e9a', borderRadius:4}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{precision:0}}}} });
+  var st = STATUS.filter(function(s){ return c.by_status[s]; });
+  charts.status = new Chart(document.getElementById('ch_status'), { type:'doughnut', data:{labels:st, datasets:[{data:st.map(function(s){return c.by_status[s];}), backgroundColor:st.map(function(s){return CLS[s][2];})}]}, options:{plugins:{legend:{position:'right'}}} });
+  var moos=Object.keys(c.by_moo).sort(function(a,b){return a-b;});
+  charts.moo = new Chart(document.getElementById('ch_moo'), { type:'bar', data:{labels:moos.map(function(m){return 'หมู่ '+m;}), datasets:[
+      {label:'เสร็จ', data:moos.map(function(m){return c.by_moo[m].done;}), backgroundColor:'#2e7d32'},
+      {label:'ค้าง', data:moos.map(function(m){return c.by_moo[m].open;}), backgroundColor:'#c62828'},
+      {label:'แจ้งเท็จ', data:moos.map(function(m){return c.by_moo[m].fake;}), backgroundColor:'#9e9e9e'}]},
+    options:{scales:{x:{stacked:true}, y:{stacked:true, beginAtZero:true, ticks:{precision:0}}}} });
+}
+function exportCsv(){
+  if(!RP.data) return;
+  var head=['วันที่แจ้ง','เลขที่','เสา','หมู่','อาการ','สถานะ','ผู้รับผิดชอบ','เสร็จเมื่อ','บันทึกช่าง'];
+  var rows=RP.data.rows.map(function(r){ return [fmtDT(r.created_at),r.report_id,r.pole_id,mooOf(r.pole_id),r.detail,r.status,r.assigned_to,fmtDT(r.done_at),r.staff_note]; });
+  var csv='﻿'+[head].concat(rows).map(function(r){ return r.map(function(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; }).join(','); }).join('\n');
+  var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'})); a.download='report_'+RP.period+'_'+RP.date+'.csv'; a.click();
+}
+
+/* ================= เสาไฟ ================= */
+async function loadPoles(){
+  var el=document.getElementById('tab_poles');
+  el.innerHTML='<div class="p-3 grid md:grid-cols-2 gap-3">'+
+    '<div class="'+T.card+'"><h3 class="font-bold m-0 mb-2">นำเข้า/อัปเดตข้อมูลเสา</h3><p class="text-sm text-stone-600">วางข้อมูลจาก Excel/Google Sheet (คัดลอกมาทั้งคอลัมน์) หรือ CSV — คอลัมน์: <code>pole_id, zone, address, lat, lng, note</code> · เลขเสาต้องเป็น <b>หมู่/ต้นที่</b> เช่น 1/14 · ถ้ามีเลขเสาเดิมอยู่แล้วจะอัปเดตทับ</p>'+
+    '<textarea id="pl_csv" class="'+T.input+' min-h-[180px] font-mono text-xs" placeholder="pole_id,zone,address,lat,lng,note\n1/1,1,หน้าวัด,18.582125,98.952782,\n1/2,1,ปากซอย,18.5825,98.9530,"></textarea>'+
+    '<div class="flex gap-2 mt-2"><button class="'+T.btnSm+' bg-brand text-white px-4" onclick="importPoles()">📥 นำเข้า</button><span class="text-sm text-stone-500 self-center" id="pl_msg"></span></div></div>'+
+    '<div class="'+T.card+' overflow-auto max-h-[70vh]"><div class="flex justify-between items-center mb-2"><h3 class="font-bold m-0">เสาในระบบ <span id="pl_count" class="text-stone-500 font-normal text-sm"></span></h3><input id="pl_q" class="'+T.input+' w-auto py-1.5 text-sm" placeholder="ค้นหา" oninput="renderPoles()"></div><div id="pl_list"></div></div></div>';
+  try { window.POLES = await api('/api/poles'); renderPoles(); } catch(e){ document.getElementById('pl_list').innerHTML='<p class="text-red-700">'+esc(e.message)+'</p>'; }
+}
+function renderPoles(){
+  var q=(document.getElementById('pl_q').value||'').toLowerCase();
+  var rows=(POLES||[]).filter(function(p){ return !q || (p.pole_id+' '+(p.address||'')+' '+(p.zone||'')).toLowerCase().indexOf(q)>=0; });
+  var noGeo=(POLES||[]).filter(function(p){return !p.lat||!p.lng;}).length;
+  document.getElementById('pl_count').textContent='('+(POLES||[]).length+' ต้น'+(noGeo?' · ไม่มีพิกัด '+noGeo:'')+')';
+  document.getElementById('pl_list').innerHTML='<table class="w-full text-sm"><thead><tr><th class="'+TH+'">เสา</th><th class="'+TH+'">หมู่</th><th class="'+TH+'">จุดสังเกต</th><th class="'+TH+'">พิกัด</th></tr></thead><tbody>'+
+    rows.slice(0,500).map(function(p){ return '<tr><td class="'+TD+' font-bold">'+esc(p.pole_id)+'</td><td class="'+TD+'">'+esc(p.zone)+'</td><td class="'+TD+'">'+esc(p.address)+'</td><td class="'+TD+'">'+(p.lat&&p.lng?'<a class="text-blue-700" target="_blank" rel="noopener" href="'+gmaps(p.lat,p.lng)+'">🧭 '+p.lat+', '+p.lng+'</a>':'<span class="text-red-700">ไม่มีพิกัด</span>')+'</td></tr>'; }).join('')+'</tbody></table>'+(rows.length>500?'<p class="text-xs text-stone-500">แสดง 500 แรก ใช้ช่องค้นหาเพื่อกรอง</p>':'');
+}
+async function importPoles(){
+  var txt=document.getElementById('pl_csv').value.trim(), msg=document.getElementById('pl_msg');
+  if(!txt){ msg.textContent='ยังไม่มีข้อมูล'; return; }
+  var lines=txt.split(/\r?\n/).filter(Boolean), sep=lines[0].indexOf('\t')>=0?'\t':',';
+  var head=lines[0].split(sep).map(function(h){return h.trim().toLowerCase();});
+  var isHead=head.indexOf('pole_id')>=0; if(!isHead) head=['pole_id','zone','address','lat','lng','note'];
+  var rows=lines.slice(isHead?1:0).map(function(l){ var c=l.split(sep); var o={}; head.forEach(function(h,i){ o[h]=(c[i]||'').trim().replace(/^"|"$/g,''); }); if(!o.zone&&o.pole_id) o.zone=mooOf(o.pole_id); return o; });
+  msg.textContent='กำลังนำเข้า '+rows.length+' แถว…';
+  try { var r=await api('/api/poles',{method:'POST',body:{rows:rows}}); msg.textContent='✓ นำเข้า/อัปเดตแล้ว '+r.count+' ต้น'; document.getElementById('pl_csv').value=''; POLES=await api('/api/poles'); renderPoles(); }
+  catch(e){ msg.textContent='✗ '+e.message; }
+}
+
+/* ================= บัญชีดำ ================= */
+async function loadBlock(){
+  var el=document.getElementById('tab_block');
+  var list=[]; try { list=await api('/api/block'); } catch(e){}
+  el.innerHTML='<div class="p-3 max-w-3xl"><div class="'+T.card+'"><h3 class="font-bold m-0 mb-2">บัญชีดำเบอร์โทร ('+list.length+')</h3><p class="text-sm text-stone-600">เบอร์ในรายการนี้จะแจ้งซ่อมไม่ได้ ระบบจะแสดงข้อความให้โทรติดต่อ อบต. แทน</p>'+
+    '<div class="flex flex-wrap gap-2 my-3"><input id="bl_p" class="'+T.input+' w-auto flex-1 min-w-[140px] py-2 text-sm" placeholder="เบอร์โทร" inputmode="tel"><input id="bl_r" class="'+T.input+' w-auto flex-1 min-w-[160px] py-2 text-sm" placeholder="เหตุผล" value="แจ้งเท็จซ้ำ"><button class="'+T.btnSm+' bg-red-700 text-white" onclick="blockPhone(document.getElementById(\'bl_p\').value,document.getElementById(\'bl_r\').value)">บล็อก</button></div>'+
+    '<table class="w-full text-sm"><thead><tr><th class="'+TH+'">เบอร์</th><th class="'+TH+'">เหตุผล</th><th class="'+TH+'">วันที่</th><th class="'+TH+'"></th></tr></thead><tbody>'+
+    list.map(function(b){ return '<tr><td class="'+TD+' font-mono">'+esc(b.phone)+'</td><td class="'+TD+'">'+esc(b.reason)+'</td><td class="'+TD+'">'+fmtDT(b.blocked_at)+'</td><td class="'+TD+' text-right"><button class="text-blue-700 underline text-sm" onclick="unblock(\''+esc(b.phone)+'\')">ปลดบล็อก</button></td></tr>'; }).join('')||'<tr><td class="'+TD+' text-stone-500" colspan="4">ยังไม่มีเบอร์ในบัญชีดำ</td></tr>'+
+    '</tbody></table></div></div>';
+}
+async function blockPhone(phone, reason){
+  if (reason===undefined){ reason=prompt('บล็อกเบอร์ '+phone+' — ระบุเหตุผล:','แจ้งเท็จซ้ำ'); if(reason===null) return; }
+  try { await api('/api/block',{method:'POST',body:{phone:phone,reason:reason}}); alert('บล็อกแล้ว'); if(!document.getElementById('tab_block').classList.contains('hidden')) loadBlock(); }
+  catch(e){ alert(e.message); }
+}
+async function unblock(phone){ if(!confirm('ปลดบล็อก '+phone+' ?')) return; try { await api('/api/block?phone='+encodeURIComponent(phone),{method:'DELETE'}); loadBlock(); } catch(e){ alert(e.message); } }
+
+/* ================= ผู้ใช้งาน ================= */
+async function loadUsers(){
+  var el=document.getElementById('tab_users'); var list=[]; try { list=await api('/api/users'); } catch(e){}
+  el.innerHTML='<div class="p-3 grid md:grid-cols-2 gap-3">'+
+    '<div class="'+T.card+'"><h3 class="font-bold m-0 mb-2">เพิ่ม / แก้ไขบัญชี</h3>'+
+    '<label class="block font-bold mt-2 mb-1 text-sm">ชื่อผู้ใช้ (a-z 0-9)</label><input id="us_u" class="'+T.input+'" placeholder="เช่น somchai" autocapitalize="off">'+
+    '<label class="block font-bold mt-2 mb-1 text-sm">ชื่อที่แสดง</label><input id="us_n" class="'+T.input+'" placeholder="เช่น นายสมชาย ช่างไฟ">'+
+    '<label class="block font-bold mt-2 mb-1 text-sm">สิทธิ์</label><select id="us_r" class="'+T.input+'"><option value="tech">ช่าง (ดู/อัปเดตงาน)</option><option value="admin">แอดมิน (ทุกอย่าง + รายงาน + ผู้ใช้)</option></select>'+
+    '<label class="block font-bold mt-2 mb-1 text-sm">รหัสผ่าน <span class="text-stone-400 font-normal">(เว้นว่างถ้าไม่เปลี่ยน)</span></label><input id="us_p" class="'+T.input+'" type="text" placeholder="อย่างน้อย 6 ตัว">'+
+    '<label class="flex items-center gap-2 mt-3 text-sm"><input type="checkbox" id="us_a" checked class="size-4 accent-brand"> เปิดใช้งาน</label>'+
+    '<button class="'+T.btn+' w-full mt-3" onclick="saveUser()">💾 บันทึกบัญชี</button><p class="text-xs text-stone-500 mt-2">บัญชี <b>admin</b> หลักใช้รหัสจาก ADMIN_TOKEN ใน Vercel — ใช้ตั้งต้นและกู้คืนระบบ ไม่แสดงในรายการนี้</p></div>'+
+    '<div class="'+T.card+'"><h3 class="font-bold m-0 mb-2">บัญชีทั้งหมด ('+list.length+')</h3><table class="w-full text-sm"><thead><tr><th class="'+TH+'">ผู้ใช้</th><th class="'+TH+'">ชื่อ</th><th class="'+TH+'">สิทธิ์</th><th class="'+TH+'">เข้าใช้ล่าสุด</th><th class="'+TH+'"></th></tr></thead><tbody>'+
+    list.map(function(u){ return '<tr class="'+(u.active?'':'opacity-50')+'"><td class="'+TD+' font-mono">'+esc(u.username)+'</td><td class="'+TD+'">'+esc(u.display_name)+(u.active?'':' <span class="text-xs text-red-700">(ปิด)</span>')+'</td><td class="'+TD+'">'+(u.role==='admin'?'แอดมิน':'ช่าง')+'</td><td class="'+TD+' text-xs">'+(u.last_login?fmtDT(u.last_login):'-')+'</td><td class="'+TD+' text-right whitespace-nowrap"><button class="text-blue-700 underline text-sm mr-2" onclick=\'editUser('+JSON.stringify(u)+')\'>แก้</button><button class="text-red-700 underline text-sm" onclick="delUser(\''+esc(u.username)+'\')">ลบ</button></td></tr>'; }).join('')||'<tr><td class="'+TD+' text-stone-500" colspan="5">ยังไม่มีบัญชี — สร้างบัญชีช่างคนแรกทางซ้าย</td></tr>'+
+    '</tbody></table></div></div>';
+}
+function editUser(u){ document.getElementById('us_u').value=u.username; document.getElementById('us_n').value=u.display_name; document.getElementById('us_r').value=u.role; document.getElementById('us_a').checked=u.active; document.getElementById('us_p').value=''; document.getElementById('us_u').focus(); }
+async function saveUser(){
+  try { var r=await api('/api/users',{method:'POST',body:{username:document.getElementById('us_u').value,display_name:document.getElementById('us_n').value,role:document.getElementById('us_r').value,password:document.getElementById('us_p').value,active:document.getElementById('us_a').checked}});
+    alert(r.created?'สร้างบัญชีแล้ว แจ้งชื่อผู้ใช้/รหัสให้ช่าง แล้วให้เปลี่ยนรหัสเองในหน้าช่าง':'อัปเดตแล้ว'); loadUsers(); }
+  catch(e){ alert(e.message); }
+}
+async function delUser(u){ if(!confirm('ลบบัญชี '+u+' ?')) return; try { await api('/api/users?username='+encodeURIComponent(u),{method:'DELETE'}); loadUsers(); } catch(e){ alert(e.message); } }
+
+if (Auth.get()) start(); else renderGate('root', 'เข้าสู่ระบบแอดมิน', start);
+</script>
+</body>
+</html>

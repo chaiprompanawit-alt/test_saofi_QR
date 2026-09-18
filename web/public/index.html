@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%92%A1%3C/text%3E%3C/svg%3E">
+<title>แจ้งซ่อมไฟฟ้าสาธารณะ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<style type="text/tailwindcss">
+  @theme { --color-brand: #1e4e9a; --color-brand-dark: #163a73; --color-accent: #f2b632; --color-paper: #f3f6fb; --color-line: #d9e1ee; --font-sans: "Sarabun", "Segoe UI", system-ui, sans-serif; }
+</style>
+<link rel="stylesheet" href="assets/app.css">
+<script src="assets/config.js"></script>
+</head>
+<body class="bg-paper text-stone-800 font-sans">
+<div class="max-w-lg mx-auto p-4">
+  <header class="bg-brand text-white rounded-b-2xl -mt-4 -mx-4 px-4 py-5 text-center flex flex-col items-center gap-1">
+    <img id="logo" src="assets/logo.png" alt="" class="h-14 hidden" onload="this.classList.remove('hidden')" onerror="this.remove()">
+    <h1 class="text-xl font-extrabold m-0">แจ้งซ่อมไฟฟ้าสาธารณะ</h1>
+    <p class="text-sm opacity-90 m-0" id="orgLine"></p>
+  </header>
+
+  <div id="app" class="mt-4"><div class="text-center text-stone-500 py-10">กำลังตรวจสอบเสาไฟ…</div></div>
+
+  <p class="text-xs text-stone-500 text-center mt-4" id="footLine"></p>
+</div>
+
+<script>
+  document.getElementById('orgLine').textContent = ORG.name + ' ' + ORG.area;
+  document.getElementById('footLine').textContent = 'ดำเนินการในวันเวลาราชการ · ไม่เกิน ' + ORG.sla_days + ' วันทำการ · โทร ' + ORG.phone;
+
+  var qs = new URLSearchParams(location.search);
+  var POLE = (qs.get('pole') || '').trim(), K = qs.get('k') || '';
+  var OPENED_AT = Date.now();   // จับเวลาตั้งแต่เปิดหน้า กันบอทส่งทันที
+  var gps = { lat:'', lng:'' };
+  var app = document.getElementById('app');
+
+  var I = 'w-full px-3 py-3 rounded-xl border border-line bg-white text-base focus:outline-none focus:ring-2 focus:ring-brand/40';
+  var LBL = 'block font-bold mt-4 mb-1.5';
+  function esc(s){ return String(s==null?'':s).replace(/[<>&"]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];}); }
+  function card(inner, cls){ return '<div class="bg-white border border-line rounded-2xl p-5 '+(cls||'')+'">'+inner+'</div>'; }
+  function doneBox(icon, title, color, html){
+    return card('<div class="text-center py-4"><div class="text-6xl">'+icon+'</div><h2 class="text-xl font-bold my-2 '+color+'">'+title+'</h2>'+html+'</div>');
+  }
+
+  async function init(){
+    var res;
+    try {
+      var r = await fetch('/api/pole?pole='+encodeURIComponent(POLE)+'&k='+encodeURIComponent(K));
+      res = await r.json();
+    } catch(e){ app.innerHTML = doneBox('⚠️','เชื่อมต่อไม่ได้','text-red-700','<p>กรุณาลองใหม่ หรือโทร '+ORG.phone+'</p>'); return; }
+
+    if (!res.qrOk) {
+      app.innerHTML = doneBox('🚫','ลิงก์ไม่ถูกต้อง','text-red-700',
+        '<p>กรุณาสแกน QR Code จากสติกเกอร์บนเสาไฟอีกครั้ง<br>หรือโทร <a class="text-brand font-bold" href="tel:'+ORG.phoneTel+'">'+ORG.phone+'</a></p>');
+      return;
+    }
+    if (res.openReport) {
+      app.innerHTML = doneBox('🔔','เสา '+esc(res.pole_id)+' มีคนแจ้งไว้แล้ว','text-orange-600',
+        '<p>เลขที่แจ้ง <span class="font-mono bg-indigo-50 px-2 py-0.5 rounded">'+esc(res.openReport.report_id)+'</span><br>สถานะ: <b>'+esc(res.openReport.status)+'</b></p>'+
+        '<p class="text-sm text-stone-500 mt-3">'+ORG.dept+'กำลังดำเนินการ ไม่ต้องแจ้งซ้ำครับ<br>หากอาการเปลี่ยน/เร่งด่วน โทร <a class="text-brand font-bold" href="tel:'+ORG.phoneTel+'">'+ORG.phone+'</a></p>');
+      return;
+    }
+    renderForm(res.pole_id, res.pole);
+  }
+
+  function renderForm(poleId, pole){
+    var parts = poleId.split('/'), moo = parts[0], ton = parts[1];
+    var badge;
+    if (pole) {
+      badge = '<div class="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">'+
+        '<div class="text-3xl font-extrabold text-brand leading-none">'+esc(pole.pole_id)+'</div>'+
+        '<div class="text-sm text-stone-600"><div class="font-bold text-stone-800">เสาที่คุณสแกน</div>'+
+        (ton?'<div>หมู่ '+esc(moo)+' ต้นที่ '+esc(ton)+'</div>':'')+(pole.address?'<div>'+esc(pole.address)+'</div>':'')+
+        '<div class="text-green-700">✓ ระบบระบุตำแหน่งให้อัตโนมัติแล้ว</div></div></div>';
+    } else if (poleId) {
+      badge = '<div class="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">'+
+        '<div class="text-3xl font-extrabold text-brand leading-none">'+esc(poleId)+'</div>'+
+        '<div class="text-sm text-stone-600"><b class="text-stone-800">'+(ton?'หมู่ '+esc(moo)+' ต้นที่ '+esc(ton):'เลขเสา '+esc(poleId))+'</b><br>(ยังไม่มีพิกัดในระบบ ช่างจะตรวจสอบ)</div></div>';
+    } else {
+      badge = '<div class="bg-red-50 border border-red-200 text-red-800 rounded-xl px-4 py-3 text-sm">⚠️ ไม่พบเลขเสาจาก QR — กรุณากรอกเลขเสาด้านล่าง (ดูที่สติกเกอร์บนเสา)</div>'+
+        '<label class="'+LBL+'">เลขเสา (หมู่/ต้นที่) <span class="text-red-600">*</span></label><input id="manualPole" class="'+I+'" placeholder="เช่น 1/14 = หมู่ 1 ต้นที่ 14">';
+    }
+    app.innerHTML = '<div id="formArea">'+card(badge+
+      '<label class="'+LBL+'">ชื่อผู้แจ้ง <span class="text-red-600">*</span></label><input id="name" class="'+I+'" placeholder="เช่น นางสมพร" autocomplete="name">'+
+      '<label class="'+LBL+'">เบอร์โทรติดต่อกลับ <span class="text-red-600">*</span></label><input id="phone" class="'+I+'" placeholder="เช่น 08XXXXXXXX" inputmode="tel" autocomplete="tel">'+
+      '<label class="'+LBL+'">อาการที่พบ <span class="text-red-600">*</span></label>'+
+      '<div class="flex flex-wrap gap-2 mb-2" id="quick">'+['ไฟดับทั้งต้น','ไฟกะพริบ','ไฟติดกลางวัน','โคมแตก/ห้อย','สายไฟหลุด/ห้อยต่ำ','เสาเอียง/ล้ม'].map(function(t){
+        return '<button type="button" class="px-3 py-1.5 rounded-full border border-brand/40 text-brand text-sm bg-white hover:bg-brand/10" onclick="pick(this)">'+t+'</button>';}).join('')+'</div>'+
+      '<textarea id="detail" class="'+I+' min-h-[88px]" placeholder="เลือกด้านบน หรือพิมพ์เพิ่มเติม เช่น ดับมา 3 คืนแล้ว"></textarea>'+
+      '<div style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true"><label>Website</label><input id="website" tabindex="-1" autocomplete="off"></div>'+
+      (!pole ? '<div class="flex items-center gap-2 mt-3"><button type="button" class="px-3 py-2 rounded-lg bg-green-700 text-white text-sm font-semibold" onclick="getGPS()">📍 แนบตำแหน่งปัจจุบัน</button><span class="text-xs text-stone-500" id="gpsStatus">ช่วยให้ช่างหาเสาเจอง่ายขึ้น</span></div>' : '')+
+      '<button id="btn" class="w-full mt-5 py-3.5 rounded-xl bg-brand hover:bg-brand-dark text-white text-lg font-bold disabled:opacity-60" onclick="submitForm()">ส่งเรื่องแจ้งซ่อม</button>'+
+      '<p class="text-xs text-stone-500 mt-3">🔒 ชื่อและเบอร์โทรใช้เพื่อติดต่อกลับเรื่องการซ่อมเท่านั้น เก็บรักษาโดย'+ORG.dept+' '+ORG.short+' ตาม พ.ร.บ.คุ้มครองข้อมูลส่วนบุคคล (PDPA)</p>')+
+      '</div><div id="doneArea" class="hidden"></div>';
+  }
+
+  function pick(b){
+    var d=document.getElementById('detail'); var t=b.textContent;
+    if (d.value.indexOf(t)>=0) { d.value = d.value.replace(t,'').replace(/\s+/g,' ').trim(); b.classList.remove('bg-brand','text-white'); b.classList.add('bg-white','text-brand'); }
+    else { d.value = d.value ? d.value+' '+t : t; b.classList.remove('bg-white','text-brand'); b.classList.add('bg-brand','text-white'); }
+  }
+  function getGPS(){
+    var s=document.getElementById('gpsStatus');
+    if(!navigator.geolocation){ s.textContent='อุปกรณ์ไม่รองรับ GPS'; return; }
+    s.textContent='กำลังหาตำแหน่ง...';
+    navigator.geolocation.getCurrentPosition(function(p){
+      gps.lat=p.coords.latitude.toFixed(6); gps.lng=p.coords.longitude.toFixed(6);
+      s.textContent='📍 แนบแล้ว ('+gps.lat+', '+gps.lng+')';
+    }, function(){ s.textContent='ไม่สามารถเข้าถึงตำแหน่งได้ (ข้ามได้)'; }, {enableHighAccuracy:true, timeout:8000});
+  }
+  async function submitForm(){
+    var poleId = POLE, manual=document.getElementById('manualPole');
+    if(!poleId && manual) poleId = manual.value.trim();
+    var name=document.getElementById('name').value.trim(), phone=document.getElementById('phone').value.trim(), detail=document.getElementById('detail').value.trim();
+    if(!poleId){ alert('กรุณากรอกเลขเสา'); return; }
+    if(!name||!phone||!detail){ alert('กรุณากรอก ชื่อ / เบอร์โทร / อาการที่พบ ให้ครบ'); return; }
+    var btn=document.getElementById('btn'); btn.disabled=true; btn.textContent='กำลังส่ง...';
+    try {
+      var r = await fetch('/api/report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        pole_id:poleId, k:K, reporter_name:name, reporter_phone:phone, detail:detail, gps_lat:gps.lat, gps_lng:gps.lng,
+        website:document.getElementById('website').value, opened_at:OPENED_AT })});
+      var res = await r.json();
+      if(!r.ok) throw new Error(res.error||'ส่งไม่สำเร็จ');
+      document.getElementById('formArea').classList.add('hidden');
+      var d=document.getElementById('doneArea'); d.classList.remove('hidden');
+      d.innerHTML = res.duplicate
+        ? doneBox('🔔','เสานี้มีคนแจ้งไว้แล้ว','text-orange-600','<p>เลขที่แจ้ง <span class="font-mono bg-indigo-50 px-2 rounded">'+esc(res.report_id)+'</span><br>สถานะ: <b>'+esc(res.status)+'</b><br>'+ORG.dept+'กำลังดำเนินการ ไม่ต้องแจ้งซ้ำครับ</p>')
+        : doneBox('✅','รับเรื่องแล้ว','text-green-700','<p>เลขที่แจ้ง: <span class="font-mono bg-indigo-50 px-2 rounded">'+esc(res.report_id)+'</span></p><p class="text-stone-600 mt-2">เจ้าหน้าที่'+ORG.dept+'จะดำเนินการภายใน '+ORG.sla_days+' วันทำการ<br>ขอบคุณที่ช่วยดูแลชุมชนครับ</p><p class="text-xs text-stone-500 mt-3">จดเลขที่แจ้งไว้เพื่อสอบถามความคืบหน้า โทร '+ORG.phone+'</p>');
+      window.scrollTo(0,0);
+    } catch(e){ btn.disabled=false; btn.textContent='ส่งเรื่องแจ้งซ่อม'; alert(e.message); }
+  }
+  init();
+</script>
+</body>
+</html>
