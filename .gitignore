@@ -1,0 +1,17 @@
+# ===== ข้อมูลส่วนตัว / ความลับทางธุรกิจ (ห้าม commit) =====
+private/
+*.local.*
+*_secret*
+credentials.json
+.env
+
+# ข้อมูลเสาจริง / ข้อมูลผู้แจ้ง (PII) - ห้ามขึ้น repo สาธารณะ
+data/poles_real*.csv
+data/reports_export*.csv
+
+# ไฟล์ระบบ
+.DS_Store
+Thumbs.db
+node_modules/
+__pycache__/
+*.pyc

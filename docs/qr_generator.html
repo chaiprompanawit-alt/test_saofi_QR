@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>สร้าง QR รายเสา - ทต.ป่าสัก</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  body{font-family:"Sarabun",sans-serif;background:#f4f2ee;margin:0;padding:16px;color:#2b2620}
+  .wrap{max-width:900px;margin:0 auto}
+  h1{font-size:20px}
+  .box{background:#fff;border:1px solid #e2ddd5;border-radius:12px;padding:16px;margin-bottom:16px}
+  label{font-weight:700;display:block;margin:8px 0 4px}
+  input,textarea{width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;font-family:inherit;font-size:14px;box-sizing:border-box}
+  textarea{min-height:120px}
+  button{background:#7a5c3e;color:#fff;border:0;padding:12px 20px;border-radius:10px;font-size:15px;cursor:pointer;margin-top:12px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}
+  .qc{border:1px solid #e2ddd5;border-radius:10px;padding:12px;text-align:center;background:#fff}
+  .qc .num{font-size:22px;font-weight:800;color:#7a5c3e}
+  .qc canvas,.qc img{margin:6px auto}
+  .muted{color:#8a7f6e;font-size:13px}
+  @media print{ button,.box.noprint{display:none} body{background:#fff} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🏷️ สร้าง QR Code รายเสา (แต่ละต้นมี QR ของตัวเอง)</h1>
+  <div class="box noprint">
+    <label>Web App URL (จาก Apps Script &gt; Deploy)</label>
+    <input id="base" placeholder="https://script.google.com/macros/s/AKfycb..../exec">
+    <p class="muted">ระบบจะสร้างลิงก์: <code>URL?pole=เลขเสา</code> ให้อัตโนมัติ เมื่อสแกนแล้วหน้าเว็บจะรู้ทันทีว่าเป็นเสาต้นไหน</p>
+    <label>รายการเลขเสา (พิมพ์ทีละบรรทัด หรือวางจากคอลัมน์ pole_id)</label>
+    <textarea id="poles">1-53
+1-54
+4-100
+4-123
+9-9</textarea>
+    <button onclick="gen()">สร้าง QR ทั้งหมด</button>
+    <button onclick="window.print()" style="background:#5b7a3e">🖨️ พิมพ์ / บันทึก PDF</button>
+  </div>
+  <div class="grid" id="out"></div>
+</div>
+<script>
+function gen(){
+  var base=document.getElementById('base').value.trim();
+  if(!base){ alert('กรุณาวาง Web App URL ก่อน'); return; }
+  var list=document.getElementById('poles').value.split('\n').map(function(s){return s.trim();}).filter(Boolean);
+  var out=document.getElementById('out'); out.innerHTML='';
+  list.forEach(function(p){
+    var url=base+(base.indexOf('?')>=0?'&':'?')+'pole='+encodeURIComponent(p);
+    var card=document.createElement('div'); card.className='qc';
+    var num=document.createElement('div'); num.className='num'; num.textContent=p; card.appendChild(num);
+    var q=document.createElement('div'); card.appendChild(q);
+    new QRCode(q,{text:url,width:150,height:150,correctLevel:QRCode.CorrectLevel.M});
+    var cap=document.createElement('div'); cap.className='muted'; cap.textContent='แจ้งซ่อมไฟฟ้า ทต.ป่าสัก'; card.appendChild(cap);
+    out.appendChild(card);
+  });
+}
+</script>
+</body>
+</html>

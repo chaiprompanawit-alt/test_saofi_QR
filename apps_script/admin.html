@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root{ --brand:#7a5c3e; --bg:#f4f2ee; --card:#fff; --line:#e2ddd5;
+    --new:#c62828; --recv:#ef6c00; --prog:#1565c0; --done:#2e7d32; --close:#607d8b; }
+  *{box-sizing:border-box}
+  body{font-family:"Sarabun","Segoe UI",sans-serif;margin:0;background:var(--bg);color:#2b2620;}
+  .top{background:var(--brand);color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+  .top h1{font-size:17px;margin:0}
+  .stats{display:flex;gap:8px;flex-wrap:wrap}
+  .stat{background:rgba(255,255,255,.15);border-radius:8px;padding:4px 10px;font-size:13px}
+  .layout{display:flex;gap:12px;padding:12px;flex-wrap:wrap}
+  #map{flex:1 1 380px;height:60vh;min-height:340px;border-radius:12px;border:1px solid var(--line)}
+  .list{flex:1 1 420px;max-height:60vh;overflow:auto}
+  .item{background:var(--card);border:1px solid var(--line);border-left:5px solid #ccc;border-radius:10px;padding:12px;margin-bottom:10px}
+  .item h3{margin:0 0 4px;font-size:16px;display:flex;justify-content:space-between;align-items:center}
+  .pill{font-size:12px;color:#fff;padding:2px 9px;border-radius:20px;font-weight:600}
+  .s-new{border-left-color:var(--new)} .p-new{background:var(--new)}
+  .s-recv{border-left-color:var(--recv)} .p-recv{background:var(--recv)}
+  .s-prog{border-left-color:var(--prog)} .p-prog{background:var(--prog)}
+  .s-done{border-left-color:var(--done)} .p-done{background:var(--done)}
+  .s-close{border-left-color:var(--close)} .p-close{background:var(--close)}
+  .meta{font-size:13px;color:#6b5f4e;line-height:1.6}
+  .meta a{color:var(--prog);text-decoration:none}
+  .row{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  select,input,button{font-family:inherit;font-size:13px;padding:7px 9px;border:1px solid var(--line);border-radius:8px}
+  .row select,.row input{flex:1 1 auto;min-width:90px}
+  .save{background:var(--brand);color:#fff;border:0;cursor:pointer;padding:7px 14px}
+  .filters{padding:0 12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .gate{max-width:360px;margin:60px auto;background:#fff;padding:24px;border-radius:14px;border:1px solid var(--line);text-align:center}
+  .muted{color:#8a7f6e;font-size:13px}
+</style>
+</head>
+<body>
+<? if (!adminOk) { ?>
+  <div class="gate">
+    <h2>🔒 สำหรับเจ้าหน้าที่กองช่าง</h2>
+    <p class="muted">กรุณาใส่รหัสเข้าใช้งานแดชบอร์ด</p>
+    <input id="tok" type="password" placeholder="รหัสเจ้าหน้าที่" style="width:100%;margin-bottom:10px">
+    <button class="save" style="width:100%" onclick="var v=document.getElementById('tok').value;location.href='?page=admin&token='+encodeURIComponent(v)">เข้าสู่ระบบ</button>
+  </div>
+<? } else { ?>
+  <div class="top">
+    <h1>🛠️ แดชบอร์ดแจ้งซ่อมไฟฟ้า — ทต.ป่าสัก</h1>
+    <div class="stats" id="stats"></div>
+  </div>
+  <div class="filters">
+    <label class="muted">สถานะ:</label>
+    <select id="filter" onchange="render()"><option value="">ทั้งหมด</option></select>
+    <button class="save" onclick="load()">🔄 รีเฟรช</button>
+    <span class="muted" id="count"></span>
+  </div>
+  <div class="layout">
+    <div id="map"></div>
+    <div class="list" id="list"></div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script>
+    var TOKEN = "<?= token ?>";
+    var STATUS = [], DATA = [], map, markers;
+    var cls = { 'แจ้งใหม่':['s-new','p-new','#c62828'], 'รับเรื่องแล้ว':['s-recv','p-recv','#ef6c00'],
+      'กำลังดำเนินการ':['s-prog','p-prog','#1565c0'], 'เสร็จสิ้น':['s-done','p-done','#2e7d32'],
+      'ปิดงาน/ไม่พบปัญหา':['s-close','p-close','#607d8b'] };
+
+    function initMap(){
+      map = L.map('map').setView([18.55, 99.02], 13); // ศูนย์กลางประมาณ ต.ป่าสัก
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        {maxZoom:19, attribution:'© OpenStreetMap'}).addTo(map);
+      markers = L.layerGroup().addTo(map);
+    }
+
+    function load(){
+      google.script.run.withSuccessHandler(function(list){
+        DATA = list; render();
+      }).withFailureHandler(function(e){ alert('โหลดข้อมูลไม่สำเร็จ: '+e.message); }).getReports(TOKEN);
+    }
+
+    function esc(s){ return String(s==null?'':s).replace(/[<>&]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;'}[c];}); }
+
+    function render(){
+      var f = document.getElementById('filter').value;
+      var rows = DATA.filter(function(r){ return !f || r.status===f; });
+      document.getElementById('count').textContent = 'แสดง '+rows.length+' รายการ';
+
+      // สถิติ
+      var cnt={}; DATA.forEach(function(r){ cnt[r.status]=(cnt[r.status]||0)+1; });
+      document.getElementById('stats').innerHTML =
+        '<span class="stat">ทั้งหมด '+DATA.length+'</span>' +
+        Object.keys(cls).map(function(k){ return cnt[k]?'<span class="stat">'+k+' '+cnt[k]+'</span>':''; }).join('');
+
+      // แผนที่
+      markers.clearLayers(); var pts=[];
+      rows.forEach(function(r){
+        if(r.lat && r.lng){
+          var c = (cls[r.status]||['','','#888'])[2];
+          var m = L.circleMarker([+r.lat,+r.lng],{radius:9,color:'#fff',weight:2,fillColor:c,fillOpacity:.95});
+          m.bindPopup('<b>เสา '+esc(r.pole_id)+'</b><br>'+esc(r.detail)+'<br>สถานะ: '+esc(r.status)+
+            '<br><a href="https://www.google.com/maps?q='+r.lat+','+r.lng+'" target="_blank">🧭 นำทาง</a>');
+          markers.addLayer(m); pts.push([+r.lat,+r.lng]);
+        }
+      });
+      if(pts.length) map.fitBounds(pts, {padding:[30,30], maxZoom:16});
+
+      // รายการ
+      document.getElementById('list').innerHTML = rows.map(function(r){
+        var c = cls[r.status]||['','',''];
+        var nav = (r.lat&&r.lng) ? '<a href="https://www.google.com/maps?q='+r.lat+','+r.lng+'" target="_blank">🧭 นำทาง Google Maps</a>' : '<span class="muted">ไม่มีพิกัด</span>';
+        var opts = STATUS.map(function(s){ return '<option'+(s===r.status?' selected':'')+'>'+s+'</option>'; }).join('');
+        return '<div class="item '+c[0]+'">'+
+          '<h3>เสา '+esc(r.pole_id)+' <span class="pill '+c[1]+'">'+esc(r.status)+'</span></h3>'+
+          '<div class="meta">📅 '+esc(r.timestamp)+' · เลขที่ '+esc(r.report_id)+'<br>'+
+          '🔧 '+esc(r.detail)+'<br>'+
+          '👤 '+esc(r.reporter_name)+' · 📞 <a href="tel:'+esc(r.reporter_phone)+'">'+esc(r.reporter_phone)+'</a><br>'+
+          nav+'</div>'+
+          '<div class="row">'+
+            '<select id="st_'+r._row+'">'+opts+'</select>'+
+            '<input id="as_'+r._row+'" placeholder="ผู้รับผิดชอบ" value="'+esc(r.assigned_to)+'">'+
+          '</div>'+
+          '<div class="row">'+
+            '<input id="nt_'+r._row+'" placeholder="บันทึกช่าง" value="'+esc(r.staff_note)+'">'+
+            '<button class="save" onclick="save('+r._row+')">บันทึก</button>'+
+          '</div>'+
+        '</div>';
+      }).join('') || '<p class="muted" style="text-align:center">ยังไม่มีรายการแจ้งซ่อม</p>';
+    }
+
+    function save(row){
+      var st=document.getElementById('st_'+row).value;
+      var as=document.getElementById('as_'+row).value;
+      var nt=document.getElementById('nt_'+row).value;
+      google.script.run.withSuccessHandler(function(){ load(); })
+        .withFailureHandler(function(e){ alert('บันทึกไม่สำเร็จ: '+e.message); })
+        .updateReport(TOKEN, row, st, as, nt);
+    }
+
+    initMap();
+    google.script.run.withSuccessHandler(function(list){
+      STATUS=list;
+      var f=document.getElementById('filter');
+      list.forEach(function(s){ var o=document.createElement('option'); o.textContent=s; f.appendChild(o); });
+      load();
+    }).getStatusList();
+  </script>
+<? } ?>
+</body>
+</html>
